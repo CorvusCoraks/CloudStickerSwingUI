@@ -175,6 +175,7 @@ public class Model {
         /*-------------------*/
         if(!isInternerConnectionActive()){ return; }
 
+        Controller.gui.setFrameDisable();
         boolean isSynchronisation = true;
 
         // Map<String, Date> mapTimeStamps = Internet.getTimeStamps(iniData.get("userID"), iniData.get("deviceID"));
@@ -312,6 +313,7 @@ public class Model {
             }
         }
 
+        Controller.gui.setFrameEnable();
     }
 
     protected synchronized void InviteOrKickButtonPressed(JButton button){
