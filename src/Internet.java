@@ -9,7 +9,8 @@ import java.util.*;
 public class Internet {
     //protected static final int TEST_CONNECTION_DELAY = 5000; // миллисекунды
     //private final String USER_AGENT = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:35.0) Gecko/20100101 Firefox/35.0"; // рабочий вариант
-    private static final String USER_AGENT = "Mozilla/5.0 Gecko/20100101 Firefox/35.0"; // убрал информацию в скобках (видимо, о системе). Тоже рабочий вариант
+    //private static final String USER_AGENT = "Mozilla/5.0 Gecko/20100101 Firefox/35.0"; // убрал информацию в скобках (видимо, о системе). Тоже рабочий вариант
+    private static final String USER_AGENT = "Mozilla/5.0 Gecko/20100101 Firefox/35.0 CloudNotesAgent/0.0"; // добавил в конец информацию о том, что это моя программа. Работает.
     //private final String USER_AGENT = "Mozilla/5.0"; // в таком виде: сервер выдаёт ошибку 406
     private static final String ACCEPT = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
     private static final String ACCEPT_ENCODING = "gzip, deflate"; // если использовать - уродует ответ сервера
@@ -22,9 +23,10 @@ public class Internet {
     //private static final String FOR_PING_URL = "cloudnotes.gremal.ru"; // адрус пингуемого хоста
     private static final int ANSWER_WAIT_TIME = 15000; // Время ожидания ответа от хоста, мс
     private static final String myURL = "http://cn.gremal.ru/cgi-bin/cloudgate.cgi";
+    //private static final String myURL = "http://192.185.236.166/~gremal/cloudnotes/cgi-bin/cloudgate.cgi";
     private static final int port = 80;
-    private static final String FIELDS_DELIMITER = "<42>";
-    private static final String RECORDS_DELIMITER = "<128>";
+    private static final String FIELDS_DELIMITER = "<42>"; // разделитель полей в возвращаемой записи
+    private static final String RECORDS_DELIMITER = "<128>"; // разделитель записей
 
 
     protected static void test() throws IOException
@@ -138,8 +140,8 @@ public class Internet {
             if(chars != -1){ bld.append(buffer, 0, chars); }
         }
         reader.close();
-        //String[] answerArray = bld.toString().split("<\\d{2,3}>");
-        String[] answerArray = bld.toString().split("(<42>)|(<128>)");
+        //String[] answerArray = bld.toString().split("(<42>)|(<128>)");
+        String[] answerArray = bld.toString().split(String.format("(%1$s)|(%2$s)", FIELDS_DELIMITER, RECORDS_DELIMITER));
         for(String el : answerArray){ list.add(el); }
 
         return list;
@@ -524,6 +526,7 @@ public class Internet {
 /*-------------------------------------------------------------------------------------------------------------------*/
 class InternetConnectionTest{
     private static final String[] PING_URLS = {"http://www.yandex.ru/", "http://cn.gremal.ru/test.html"};
+    //private static final String[] PING_URLS = {"http://www.yandex.ru/", "http://192.185.236.166/~gremal/cn/test.html"};
 
     /* Интерфейсная функция. Проверка доступности облака и интернета через неё. */
     protected static InternetConnectionMessage isCloudReachable(){
@@ -650,10 +653,10 @@ class TestInternetConnectionThread extends Thread
     public void run(){
         // нить живёт, пока существует gui. Ограничили время жизни.
         while(gui != null) {
-            System.out.println(String.format("Проверка наличия несинхронизированных данных - %s", Controller.model.isWasChangedTrue()));
+            //System.out.println(String.format("Проверка наличия несинхронизированных данных - %s", Controller.model.isWasChangedTrue()));
             // Тестируем связь, только если есть несинхронизированные данные
             if(Controller.model.isWasChangedTrue()) {
-                System.out.println("Тестируем соединение.");
+                //System.out.println("Тестируем соединение.");
                 this.controller.testConnection();
             }
             try {
@@ -683,7 +686,7 @@ class TestController{
         // Раскомметировать для реального запуска тестирования связи
         InternetConnectionTest.InternetConnectionMessage message = InternetConnectionTest.isCloudReachable();
         Controller.gui.setInternetConnectionStatuses(message);
-        System.out.println(message);
+        //System.out.println(message);
 
         try {
             while (isPause) { this.wait(); }

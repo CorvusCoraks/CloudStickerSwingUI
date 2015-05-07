@@ -24,6 +24,7 @@ import java.util.*;
 * */
 public class Controller {
     protected final static String DEFAULT_DATA_STAMP = "0000-00-00 00:00:00";
+    protected final static String PROGRAM_VERSION = "0.0 alpha";
     protected final static int MAX_CHARS_IN_LABEL = 25;
     protected final static int MAX_CHARS_IN_NOTE = 1000; // максимальное количество символов в заметке
     protected final static int CHARS_IN_INVITATION_PASS = 5; // количество символов в пригласительном пароле

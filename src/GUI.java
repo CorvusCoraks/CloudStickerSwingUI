@@ -42,7 +42,8 @@ public class GUI{
         private inBoxPairTextFieldAndButton[] arrayTextFieldsAndButtons = new inBoxPairTextFieldAndButton[Model.MAX_COMPANY_COUNT - 1];
         private inBoxPairTextFieldAndButton currentDevice = new inBoxPairTextFieldAndButton("Этот Ваш компьютер");
         private inBoxPairTextFieldAndButton invitationInputBox = new inBoxPairTextFieldAndButton("Ввести пароль для присоединения");
-        private JButton synchronisationButton = new JButton("Синхронизация через - 15 сек.");
+        //private JButton synchronisationButton = new JButton("Синхронизация через - 15 сек.");
+        private JButton synchronisationButton = new JButton("Синхронизировать");
         private JTextArea noteArea = new JTextArea();
         /* стркока статуса не может быть пустой, иначе она сразу исчезает. То есть раскладка элементов в окне
          * начинает прыгать */
@@ -76,7 +77,7 @@ public class GUI{
             //body.add(BorderLayout.CENTER, new JTextArea());
 
             // Добавить верхнуюю часть окна (заголовок)
-            this.add(BorderLayout.NORTH, new JTextArea("F"));
+            //this.add(BorderLayout.NORTH, new JTextArea("F"));
             // Текстовая область в центре главного окна
             this.add(BorderLayout.CENTER, getMainTabbedPane());
             //this.add(BorderLayout.CENTER, new JTextArea("D"));
@@ -84,13 +85,6 @@ public class GUI{
             //this.add(BorderLayout.SOUTH, new JTextArea("J"));
             this.add(BorderLayout.SOUTH, getMainFooter());
 
-
-            // Кнопка синхронизации (со статусом синхронизации)
-            //this.add(BorderLayout.SOUTH, new JButton("Синхронизация через - 15 сек."));
-            // Область статуса
-            //this.add(BorderLayout.SOUTH, new JLabel("Строка статуса"));
-            // Область для рекламы
-            //this.add(BorderLayout.SOUTH, new JLabel("Текстовая реклама по всей ширине"));
             this.addListeners();
             (new rotateStausList()).start();
             //isGUIready = true;
@@ -113,7 +107,8 @@ public class GUI{
 
             footer.add(BorderLayout.NORTH, synchronisationButton);
             footer.add(BorderLayout.CENTER, statusStringLabel);
-            footer.add(BorderLayout.SOUTH, new JLabel("Реклама"));
+            //footer.add(BorderLayout.SOUTH, new JLabel("Реклама"));
+            footer.add(BorderLayout.SOUTH, new JLabel());
             return footer;
         }
 
@@ -298,7 +293,7 @@ public class GUI{
         class myWindowFocusListener implements WindowFocusListener{
             @Override
             public void windowGainedFocus(WindowEvent e) {
-                System.out.println("Окно в фокусе.");
+                //System.out.println("Окно в фокусе.");
                 if(Controller.model.isWasChangedTrue()){
                     // чтобы при активации события не запустить нить повторно (если она уже запущена)
                     Controller.jerkThread.controller.wakeUp();
@@ -307,7 +302,7 @@ public class GUI{
 
             @Override
             public void windowLostFocus(WindowEvent e) {
-                System.out.println("Окно не в фокусе.");
+                //System.out.println("Окно не в фокусе.");
                 Controller.jerkThread.controller.pause();
             }
         }
@@ -483,7 +478,7 @@ public class GUI{
         // считывание языковых данных из файла идёт первым, так как эти данные нужны уже при создании объекта главного окна
         localisation();
         // Map локализации заполнена? Теперь можно создавать главное окно
-        frame = new MainWindow("Тут у нас заголовок главного окна");
+        frame = new MainWindow(String.format("GreMal's CloudNotes, ver. %s", Controller.PROGRAM_VERSION));
         setInitGUIParameters();
         //localisation();
         frame.setVisible(true);
