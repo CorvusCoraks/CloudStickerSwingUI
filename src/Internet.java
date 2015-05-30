@@ -41,6 +41,69 @@ public class Internet {
         }
     }
 
+    /*
+* Отправка на удалённый сервер HTTP-запроса. Возвращамый результат - массив байт.
+* Лист байт может быть равен null, это значит, что данный запрос вернул ошибку
+*
+* Все ошибки отрабатываются в вызывающей функции!*/
+    protected static byte[] getLastVerCloudNotes(String fileURL) throws IOException
+    {
+
+
+        /* Ошибки порождаемые в этом модуле:
+        * MalformedURLException - маловероятное исключение. Просто пробрасываем его на верх до конца.
+        * IOException - отработать
+        * ProtocolException - отработать*/
+
+        URL oUrl = new URL(fileURL); // MalformedURLException - не отрабатываем
+        /*
+        * openConnection возвращает объект класса URLConnection
+        * А HttpURLConnection является потомком URLConnection. Тo есть, в данном случае мы делаем сужающее
+        * преобразование вниз. Т. е., у объекта connection мы сможем пользоваться только теми методами, которые были
+        * унаследованы от URLConnection
+        * */
+        HttpURLConnection connection = (HttpURLConnection) oUrl.openConnection(); // IOException
+        //HttpURLConnection connection = new HttpURLConnection(new URL(URL));
+
+        // add request header
+        connection.setRequestMethod("GET"); //HTTPUrlConnection // ProtocolException - отработать
+        connection.setRequestProperty("User-Agent", USER_AGENT); //URLConnection
+        connection.setRequestProperty("Accept", ACCEPT);
+        connection.setRequestProperty("Accept-Language", ACCEPT_LANGUAGE);
+        connection.setRequestProperty("Accept-Charset", ACCEPT_CHARSET);
+
+        Integer responseCode = connection.getResponseCode(); //IOException
+
+        // Если с сервера возвращается код ошибки - покидаем функцию
+        if (responseCode >= 400 ){ return null; } // отработать объяснимую ошибку
+
+        InputStream inputStream = connection.getInputStream();
+
+        byte[] buffer = new byte[1000];
+        int readedBytes = -1;
+        List<Byte> result = new ArrayList<Byte>();
+/*      в таком варианте файл правильно не считывается. Количество считанных байт меняется от случая к случаю
+        while (inputStream.available() > 0){
+            ...
+            }
+        }*/
+        while((readedBytes = inputStream.read(buffer)) > -1){
+            for(int i = 0; i < readedBytes; i++){
+                result.add(Byte.valueOf(buffer[i]));
+            }
+        }
+        inputStream.close();
+        connection.disconnect();
+
+        // Преобразовываем лист Byte в массив byte
+        byte[] result_b = new byte[result.size()];
+        for(int i = 0; i < result_b.length; i++){
+            result_b[i] = result.get(i);
+        }
+
+        return result_b;
+    }
+
     // Перегрузка метода sendHTTPRequest только с Map на входе
     protected static List<String> sendHTTPRequest(Map<String, String> map) throws IOException { return sendHTTPRequest(map, null); }
 
@@ -140,6 +203,7 @@ public class Internet {
             if(chars != -1){ bld.append(buffer, 0, chars); }
         }
         reader.close();
+        connection.disconnect();
         //String[] answerArray = bld.toString().split("(<42>)|(<128>)");
         String[] answerArray = bld.toString().split(String.format("(%1$s)|(%2$s)", FIELDS_DELIMITER, RECORDS_DELIMITER));
         for(String el : answerArray){ list.add(el); }
@@ -465,6 +529,33 @@ public class Internet {
         // добавляем пустую строку (в случае неудачи), чтобы был нормальный выход из функции
         if(!list.get(0).equals("SUCCESS")){ list.add(""); }
         // Возвращаем статус БД и userID
+        return new Internet.Result(list.get(0), list.get(1));
+    }
+
+    /* Возвращает последнюю версию программы с сервера - значение list(0) */
+    protected static Internet.Result getLastProgramVer(){
+        Map<String, String> map = new HashMap<String, String>();
+        map.put("task", "getLastVer");
+
+        List<String> list = getServerAnswer("getLastProgramVer", map);
+        if(list == null){ return new Internet.Result(DBMessage.SERVER_CONNECTION_ERROR); }
+        // добавляем пустую строку (в случае неудачи), чтобы был нормальный выход из функции
+        if(!list.get(0).equals("SUCCESS")){ list.add(""); }
+        // Возвращаем статус БД и версию
+        return new Internet.Result(list.get(0), list.get(1));
+    }
+
+    /* Отправка статистики на сервер */
+    protected static Internet.Result sendStatistics(Map<String, String> data){
+        Map<String, String> map = new HashMap<String, String>();
+        map.put("task", "sendStat");
+        map.putAll(data);
+
+        List<String> list = getServerAnswer("sendStatistics", map);
+        if(list == null){ return new Internet.Result(DBMessage.SERVER_CONNECTION_ERROR); }
+        // добавляем пустую строку (в случае неудачи), чтобы был нормальный выход из функции
+        if(!list.get(0).equals("SUCCESS")){ list.add(""); }
+        // Возвращаем статус БД и версию
         return new Internet.Result(list.get(0), list.get(1));
     }
 

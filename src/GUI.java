@@ -52,6 +52,7 @@ public class GUI{
         // обязательно синхронизировать обращение к этому массиву!
         private Map<StatusSender, StatusStringObject> statusStringsArray = new HashMap<StatusSender, StatusStringObject>(); // идентификатор отправителя, статусное сообщениеж
         private JLabel statusStringLabel = new JLabel("Строка статуса");
+        //private JButton downloadButton = new JButton("Скачать свежий CloudNotes");
         //private JTextField[] textFieldsWithDeviceNames = new JTextField[Controller.MAX_COMPANY_COUNT - 1];
         //private JButton[] buttonsWithDeviceNames = new JButton[Controller.MAX_COMPANY_COUNT - 1];
         //private JTextField invitationToCompanyTextField = new JTextField();
@@ -192,6 +193,8 @@ public class GUI{
             //JScrollPane jsp = new JScrollPane(scrollBarPanel);
             //jsp.setLayout(new ScrollPaneLayout());
             //jsp.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+            // JButton downloadButton = new JButton("Скачать свежий CloudNotes");
+            //col.add(downloadButton);
             panel.add(BorderLayout.CENTER, col);
 
             //panel.add(col);
@@ -250,7 +253,28 @@ public class GUI{
             //this.arrayTextFieldsAndButtons
             this.noteArea.addCaretListener(new NoteTextAreaListener());
             this.invitationInputBox.getButton().addActionListener(new EnterToCircleButtonListener());
+            //this.downloadButton.addActionListener(new DownloadButtonListener());
         }
+/*
+
+        class DownloadButtonListener implements ActionListener{
+            public void actionPerformed(ActionEvent Ev){
+                new newThread().start();
+            }
+
+            class newThread extends Thread
+            {
+                public void run(){
+
+                    try{
+                        java.awt.Desktop.getDesktop().open(new File(Controller.LAST_VER_FILE_LOCATION));
+                    }catch(IOException ignore){*/
+/*NOP*//*
+}
+                }
+            }
+        }
+*/
 
         /* Перехватчик сообщений главного окна */
         class MyWindowListener extends WindowAdapter {
@@ -636,6 +660,8 @@ public class GUI{
     {
         synchronized (frame.statusStringsArray){ frame.statusStringsArray.put(sender, new StatusStringObject(status)); }
     }
+    // вставить новый статус в массив статусов, с указанием количества показов.
+    // После указанного количества показов, статус удаляется из массива показов.
     protected void putNewStatusInStatusString(StatusSender sender, String status, int showCount)
     {
         synchronized (frame.statusStringsArray){ frame.statusStringsArray.put(sender, new StatusStringObject(status, showCount)); }
@@ -648,6 +674,7 @@ public class GUI{
     enum StatusSender{
         TEST_INTERNET_CONNECTION,
         NOTE_LENGTH_CONTROL,
-        LABEL_LENGTH_CONTROL
+        LABEL_LENGTH_CONTROL,
+        CONTROLLER
     }
 }
