@@ -776,7 +776,12 @@ class TestController{
     synchronized protected void testConnection(){
         // Раскомметировать для реального запуска тестирования связи
         InternetConnectionTest.InternetConnectionMessage message = InternetConnectionTest.isCloudReachable();
-        Controller.gui.setInternetConnectionStatuses(message);
+        // если только gui уже готов для работы, тогда и заполняем статусное сообщение.
+        if(Controller.gui != null) {
+            if (Controller.gui.getReady()) {
+                Controller.gui.setInternetConnectionStatuses(message);
+            }
+        }
         //System.out.println(message);
 
         try {

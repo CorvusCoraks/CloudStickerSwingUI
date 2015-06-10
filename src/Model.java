@@ -8,7 +8,7 @@ import java.util.*;
 public class Model {
     protected Map<String, String> iniData = new HashMap<String, String>();
     final private static String iniFileName = "cloudnotes.ini";
-    protected static boolean isMODELready = false;
+    private boolean isReady = false;
     /* максимальное количество устройств в компании, включая и данное устройство.
     *  в связи с этим, в интерфейсе, в разделе "Компания" должно быть текстовых полей и кнопок,
     *  связанных с другими устройствами, на одну меньше, т. е. MAX_COMPANY_COUNT - 1*/
@@ -73,6 +73,8 @@ public class Model {
             createNewNote();
         }
         getInitialisationDataFromDB();
+
+        isReady = true;
     }
 
     /* Создаём новую заметку */
@@ -218,7 +220,7 @@ public class Model {
                 connectionErrorHandler(answer.dbStatus, "Обновление записи с клиента на сервер.");
                 return;
             }
-        }else if (noteInfo.noteTimeStamp.compareTo(mapTimeStamps.get(noteInfo.noteId)) > 0){
+        }else if (noteInfo.noteTimeStamp.compareTo(mapTimeStamps.get(noteInfo.noteId)) < 0){
             /* TimeStamp у заметки на стороне клиента меньше, чем на сервере.
             Значит, обновляем данные на клиенте */
             //noteInfo.note = Internet.getNote(iniData.get("userID"), iniData.get("deviceID")).get(mapTimeStamps.get(iniData.get("userID")));
@@ -227,8 +229,9 @@ public class Model {
                 connectionErrorHandler(answer.dbStatus, "Получение заметки с сервера.");
                 return;
             }
-            noteInfo.note = (String) answer.content;
             noteInfo.noteTimeStamp = mapTimeStamps.get(iniData.get("userID"));
+            noteInfo.note = ((Map<Date, String>) answer.content).get(noteInfo.noteTimeStamp);
+            noteInfo.textArea.setText(noteInfo.note);
         }else{ /* = 0 -> ничего не делаем */ }
 
         //tempMap = Internet.getAllDevicesInfoMap(iniData.get("userID"), iniData.get("deviceID"));
@@ -284,6 +287,7 @@ public class Model {
                     // TimeStamp меньше у клиента, обновляем данные у клиента
                     device.labelTimeStamp = ((Map<String, DeviceInfo>) answer.content).get(pair.getKey()).labelTimeStamp;
                     device.deviceLabel = ((Map<String, DeviceInfo>) answer.content).get(pair.getKey()).deviceLabel;
+                    device.textField.setText(device.deviceLabel);
                 } else { /* = 0 -> либо метка не менялась нигде, либо только что скачали данные по новому устройству круга */
                     if(device.textField == null){
                         /* если текстовое поле null, значит это точно - новое устройство */
@@ -317,7 +321,7 @@ public class Model {
     }
 
     protected synchronized void InviteOrKickButtonPressed(JButton button){
-        if(!isMODELready){ return; } // модель ещё не готова
+        if(!isReady){ return; } // модель ещё не готова
         if(!isInternerConnectionActive()){ return; }
         Internet.Result answer;
         // временный мэп, в котом легче искать по кнопкам среди устройств круга. Ключ - кнопка
@@ -371,6 +375,7 @@ public class Model {
 
     /* Это происходит, если нажата кнопка "войти в круг" */
     protected synchronized void EnterToCircleButtonPressed(){
+        if(!isReady){ return; } // модель ещё не готова
         if(!isInternerConnectionActive()){ return; }
         String password = Controller.gui.getInvitationTextField().getText();
         // если длина пароля ноль или больше допустимого
@@ -423,6 +428,7 @@ public class Model {
     /* ****************************************************************************/
     /* провека данного текстового поля на занятость */
     protected boolean isTextFieldFree(JTextField jtf){
+        if(!isReady){ return false; } // модель ещё не готова
         for(Map.Entry<String, DeviceInfo> pair : devicesInCircle.entrySet()){
             if(pair.getValue().textField == null){ continue; }
             if(pair.getValue().textField == jtf){ return false; }
@@ -432,7 +438,7 @@ public class Model {
     //protected NoteInfo getNoteInfo(){return noteInfo;}
     //protected Map<String, DeviceInfo> getDevicesInCircle(){return devicesInCircle;}
     protected synchronized void setNoteWasChangedFlagToTrue(){
-        if(!isMODELready){ return; } // модель ещё не готова
+        if(!isReady){ return; } // модель ещё не готова
         noteInfo.noteWasChanged = true;
         //System.out.println(noteInfo);
         //System.out.println(noteInfo.textArea);
@@ -440,7 +446,7 @@ public class Model {
     }
     //protected void setThisDeviceLabelWasChangedFlagToTrue(){ devicesInCircle.get(iniData.get("deviceID")).labelWasChanged = true; }
     protected synchronized void setDeviceLabelWasChangedFlagToTrue(JTextField textField){
-        if(!isMODELready){ return; } // модель ещё не готова
+        if(!isReady){ return; } // модель ещё не готова
         for (Map.Entry<String, DeviceInfo> info : devicesInCircle.entrySet()) {
             if (info.getValue().textField == textField) {
                 info.getValue().labelWasChanged = true;
@@ -508,7 +514,7 @@ public class Model {
 
     /* Функция определяет, есть ли несинхронизированные данные */
     protected boolean isWasChangedTrue(){
-        if(!isMODELready){ return false; } // модель ещё не готова
+        if(!isReady){ return false; } // модель ещё не готова
         if(noteInfo.noteWasChanged){ return true; }
         for(Map.Entry<String, DeviceInfo> pair : devicesInCircle.entrySet()){
             if(pair.getValue().labelWasChanged){ return true; }
@@ -519,14 +525,14 @@ public class Model {
     // равна ли заметка в модели содержимому текстовой области
     // функция может показать, вносились ли изменения в содержимое заметки
     protected boolean isNoteEquals(String str){
-        if(!isMODELready){ return false; } // модель ещё не готова
+        if(!isReady){ return false; } // модель ещё не готова
         return this.noteInfo.note.equals(str);
     }
 
     // равна ли метка устройства в модели содержимому соответствующего текстового поля
     // Функция может показать, производились ли изменения с данным полем
     protected boolean isDeviceLabelEquals(JTextField jtf){
-        if(!isMODELready){ return false; } // модель ещё не готова
+        if(!isReady){ return false; } // модель ещё не готова
         for(Map.Entry<String, DeviceInfo> pair : devicesInCircle.entrySet()){
             if(pair.getValue().textField == jtf) {
                 if (pair.getValue().deviceLabel.equals(jtf.getText())) {

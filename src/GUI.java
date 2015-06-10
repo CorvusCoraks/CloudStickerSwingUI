@@ -17,6 +17,7 @@ public class GUI{
     //private int mainWindowHeight;
     //private int mainWindowXPosition;
     //private int mainWindowYPosition;
+    private boolean isReady = false;
     private MainWindow frame;
 
     // файл языковой локализации
@@ -89,6 +90,7 @@ public class GUI{
             this.addListeners();
             (new rotateStausList()).start();
             //isGUIready = true;
+            isReady = true;
         }
 
         private JTabbedPane getMainTabbedPane(){
@@ -206,6 +208,7 @@ public class GUI{
         //protected inBoxPairTextFieldAndButton getInvitationInputBox(){ return invitationInputBox; }
         //protected inBoxPairTextFieldAndButton[] getArrayTextFieldsAndButtons(){ return arrayTextFieldsAndButtons; }
         /* вспомогательные методы. Интерфейс выдачи данных в класс GUI */
+
         protected inBoxPairTextFieldAndButton getCurrentDeviceBox(){ return currentDevice; }
         protected inBoxPairTextFieldAndButton[] getOtherDevecesBoxes(){ return arrayTextFieldsAndButtons; }
         protected inBoxPairTextFieldAndButton getInvitationInputBox() { return invitationInputBox; }
@@ -548,6 +551,7 @@ public class GUI{
     /* **********************************************************************************/
     /* Интерфейсные функции для того, чтобы Model мог получить необходимые ссылки из GUI */
     /* **********************************************************************************/
+    protected boolean getReady(){ return this.isReady; }
     protected JTextField getThisDeviceTextField(){ return frame.getCurrentDeviceBox().getTextField(); }
     protected JButton getThisDeviceButton() { return frame.getCurrentDeviceBox().getButton(); }
     protected JTextField[] getOtherCircleDevicesTextField(){
