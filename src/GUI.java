@@ -39,6 +39,7 @@ public class GUI{
     * */
     public class MainWindow extends JFrame
     {
+        private boolean isCloseOperationRunned = false; // запущен ли протокол закрытия окна программы?
         final static private int TIME_FOR_ONE_STATUS = 4000; // миллисикунды, время показа одного статуса
         private inBoxPairTextFieldAndButton[] arrayTextFieldsAndButtons = new inBoxPairTextFieldAndButton[Model.MAX_COMPANY_COUNT - 1];
         private inBoxPairTextFieldAndButton currentDevice = new inBoxPairTextFieldAndButton("Этот Ваш компьютер");
@@ -174,7 +175,7 @@ public class GUI{
             JPanel panel = new JPanel(new BorderLayout());
             Color backgroundColor = panel.getBackground(); // сохраняем стандартный фоновый цвет
             Box col = Box.createVerticalBox();
-            col.add(new JLabel("CloudNotes"));
+            col.add(new JLabel("CloudSticker"));
             col.add(new JLabel("(c) Michael Vassin"));
             col.add(new JLabel("2015"));
             JTextArea helpInfoArea = new JTextArea();
@@ -186,7 +187,8 @@ public class GUI{
                     "Если устройство будет выключено без синхронизации с облаком, " +
                     "все изменения Вашей заметки будут утеряны!\n\n" +
                     "Внимание! Данная программа не приспособлена для работы с приватными данными, " +
-                    "так как ваша заметка не шифруется, а передаётся и хранится в открытом виде!\n\n");
+                    "так как ваша заметка не шифруется, а передаётся и хранится в открытом виде!\n\n" +
+                    "http://cloudsticker.gremal.ru/");
             helpInfoArea.setEditable(false);
             col.add(helpInfoArea);
             /* промежуточная панель для скроллбара. Для чего она нужна, смотри раскладку по закладке с компанией */
@@ -286,10 +288,20 @@ public class GUI{
             */
             public void windowClosing(WindowEvent Ev) {
                 //System.out.println("Обработчик события закрытия окна");
+                /* Устанавливаем переменную, чтобы повторные нажатия на клавишу закрытия окна не порождали
+                повторых запусков процедуры закрытия окна. Зачем?
+                Затем, что при закрытии запускается синхронизация заметки,
+                а это - новые бессмысленные нити и уже и так не быстро. */
+                if(isCloseOperationRunned){ return; }else{ isCloseOperationRunned = true; }
+
+                // запись параметров графического интерфейса в массив, для дальнейшего занесения в ini-файл
                 Controller.model.iniData.put("mainWindowXPosition", String.valueOf((int) frame.getLocation().getX()));
                 Controller.model.iniData.put("mainWindowYPosition", String.valueOf((int) frame.getLocation().getY()));
                 Controller.model.iniData.put("mainWindowWidth", String.valueOf((int) frame.getWidth()));
                 Controller.model.iniData.put("mainWindowHeight", String.valueOf((int) frame.getHeight()));
+
+                // Controller.gui.frame.setCursor(new Cursor(Cursor.WAIT_CURSOR));
+
 
                 Thread thread = new newThread();
                 thread.start();
@@ -301,8 +313,10 @@ public class GUI{
 
             class newThread extends Thread {
                 public void run() {
+                    Controller.gui.setFrameDisable();
                     Controller.model.startSynchronization();
                     Controller.model.writeInit();
+                    Controller.gui.setFrameEnable();
                 }
             }
         }
@@ -344,9 +358,11 @@ public class GUI{
             class newThread extends Thread
             {
                 public void run(){
+                    Controller.gui.setFrameDisable();
                     Controller.model.EnterToCircleButtonPressed();
                     // пароль отработан, можно удалить его из GUI
                     frame.getInvitationInputBox().getTextField().setText("");
+                    Controller.gui.setFrameEnable();
                 }
             }
         }
@@ -360,7 +376,11 @@ public class GUI{
 
             class newThread extends Thread
             {
-                public void run(){ Controller.model.startSynchronization(); }
+                public void run(){
+                    Controller.gui.setFrameDisable();
+                    Controller.model.startSynchronization();
+                    Controller.gui.setFrameEnable();
+                }
             }
         }
 
@@ -376,7 +396,10 @@ public class GUI{
                 ActionEvent ev;
 
                 public void run() {
-                    Controller.model.InviteOrKickButtonPressed((JButton) ev.getSource()); }
+                    Controller.gui.setFrameDisable();
+                    Controller.model.InviteOrKickButtonPressed((JButton) ev.getSource());
+                    Controller.gui.setFrameEnable();
+                }
 
                 public newThread() {}
 
@@ -505,7 +528,7 @@ public class GUI{
         // считывание языковых данных из файла идёт первым, так как эти данные нужны уже при создании объекта главного окна
         localisation();
         // Map локализации заполнена? Теперь можно создавать главное окно
-        frame = new MainWindow(String.format("GreMal's CloudNotes, ver. %s", Controller.PROGRAM_VERSION));
+        frame = new MainWindow(String.format("GreMal's CloudSticker, ver. %s", Controller.PROGRAM_VERSION));
         setInitGUIParameters();
         //localisation();
         frame.setVisible(true);
@@ -679,6 +702,8 @@ public class GUI{
         TEST_INTERNET_CONNECTION,
         NOTE_LENGTH_CONTROL,
         LABEL_LENGTH_CONTROL,
-        CONTROLLER
+        CONTROLLER,
+        ENTER_TO_CIRCLE
+        //DB_ERRORS
     }
 }

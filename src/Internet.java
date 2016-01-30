@@ -10,7 +10,7 @@ public class Internet {
     //protected static final int TEST_CONNECTION_DELAY = 5000; // миллисекунды
     //private final String USER_AGENT = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:35.0) Gecko/20100101 Firefox/35.0"; // рабочий вариант
     //private static final String USER_AGENT = "Mozilla/5.0 Gecko/20100101 Firefox/35.0"; // убрал информацию в скобках (видимо, о системе). Тоже рабочий вариант
-    private static final String USER_AGENT = "Mozilla/5.0 Gecko/20100101 Firefox/35.0 CloudNotesAgent/0.0"; // добавил в конец информацию о том, что это моя программа. Работает.
+    private static final String USER_AGENT = "Mozilla/5.0 Gecko/20100101 Firefox/35.0 CloudStickerAgent/0.0"; // добавил в конец информацию о том, что это моя программа. Работает.
     //private final String USER_AGENT = "Mozilla/5.0"; // в таком виде: сервер выдаёт ошибку 406
     private static final String ACCEPT = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
     private static final String ACCEPT_ENCODING = "gzip, deflate"; // если использовать - уродует ответ сервера
@@ -41,11 +41,13 @@ public class Internet {
         }
     }
 
-    /*
-* Отправка на удалённый сервер HTTP-запроса. Возвращамый результат - массив байт.
-* Лист байт может быть равен null, это значит, что данный запрос вернул ошибку
-*
-* Все ошибки отрабатываются в вызывающей функции!*/
+        /*
+    * Отправка на удалённый сервер HTTP-запроса. Возвращамый результат - массив байт.
+    * Лист байт может быть равен null, это значит, что данный запрос вернул ошибку
+    *
+    * Все ошибки отрабатываются в вызывающей функции!
+    *
+    * Функция скачивает архив с обновлённой версией программы*/
     protected static byte[] getLastVerCloudNotes(String fileURL) throws IOException
     {
 
@@ -262,7 +264,7 @@ public class Internet {
         map.put("deviceID", deviceID);
 
         // контроль длины заметки
-        if(note.length() > Controller.MAX_CHARS_IN_NOTE){ note.substring(0, Controller.MAX_CHARS_IN_NOTE); }
+        if(note.length() > Controller.MAX_CHARS_IN_NOTE){ note = note.substring(0, Controller.MAX_CHARS_IN_NOTE); }
         // чтобы заметка была не пустая.
         if(note.length() == 0){ note = "Print note here."; }
             /* все поля, которые соделжат пробелы и всякие прочие символы (включая национальные алфавиты)
@@ -346,6 +348,10 @@ public class Internet {
         if(list == null){ return new Internet.Result(DBMessage.SERVER_CONNECTION_ERROR); }
 
         String dbStatus = list.get(0);
+
+        // Красиво выходим из функции с неудачным статусом
+        if(!dbStatus.equals("SUCCESS")){ return new Internet.Result(dbStatus); }
+
         list.remove(0); // удаляем ответ Базы Данных.
 
         /* Проверяем дист на то, что его количество строк кратно возвращаемому количеству полей.
@@ -369,7 +375,8 @@ public class Internet {
     //protected static Map<Date, String> getNote(String userID, String deviceID){
     protected static Internet.Result getNote(String userID, String deviceID){
         Map<String, Date> mapResult = new HashMap<String, Date>();
-        final int RETURNED_FIELD_NUMBER = 1; // количество возвращаемых полей в запросе
+        final int RETURNED_FIELD_NUMBER = 2; // количество возвращаемых полей в запросе
+        // TimeStamp и Note
         Map<String, String> map = new HashMap<String, String>();
         map.put("task", "getNote");
         map.put("userID", userID);
@@ -379,12 +386,14 @@ public class Internet {
         if(list == null){ return new Internet.Result(DBMessage.SERVER_CONNECTION_ERROR); }
 
         String dbStatus = list.get(0);
+        // Красиво выходим из функции с неудачным статусом
+        if(!dbStatus.equals("SUCCESS")){ return new Internet.Result(dbStatus); }
         list.remove(0); // удаляем ответ Базы Данных.
 
         /* Проверяем дист на то, что его количество строк кратно возвращаемому количеству полей.
         Проверка целостности. */
         if(!(list.size() % RETURNED_FIELD_NUMBER == 0)){ return new Internet.Result(Internet.DBMessage.FIELDS_COUNT_ERROR); }
-        // в листе: 0 - статус базы. 1 и все остальные строки - заметка
+        // в листе: 0 - статус базы. 1 - TimeStamp. а все остальные строки - заметка
         StringBuilder bld = new StringBuilder(list.get(1));
         // в этом цикле собираем заметку в одну строку из массива list
         for(int i = 2; i < list.size(); i++){ bld.append(System.getProperty("line.separator")).append(list.get(i)); }
@@ -420,8 +429,8 @@ public class Internet {
         String dbStatus = list.get(0);
         list.remove(0); // удаляем ответ Базы Данных.
 
-        // выход без разбора полей при неуданой попытке доступа к Базе Данных
-        if(DBMessage.valueOf(dbStatus) != DBMessage.SUCCESS){ return new Internet.Result(dbStatus); }
+        // Красиво выходим из функции с неудачным статусом
+        if(!dbStatus.equals("SUCCESS")){ return new Internet.Result(dbStatus); }
 
         long syncDelay;
         syncDelay = Long.parseLong(list.get(0));
@@ -467,6 +476,9 @@ public class Internet {
 
         List<String> list = getServerAnswer("updateDevecesLabels", map);
         if(list == null){ return new Internet.Result(DBMessage.SERVER_CONNECTION_ERROR); }
+
+        // Красиво выходим из функции с неудачным статусом
+        if(!list.get(0).equals("SUCCESS")){ return new Internet.Result(list.get(0)); }
 
         // String dbStatus = list.get(0);
         // list.remove(0); // удаляем ответ Базы Данных.

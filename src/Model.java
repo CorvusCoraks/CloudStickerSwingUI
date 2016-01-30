@@ -7,7 +7,7 @@ import java.util.*;
  */
 public class Model {
     protected Map<String, String> iniData = new HashMap<String, String>();
-    final private static String iniFileName = "cloudnotes.ini";
+    final private static String iniFileName = "cloudsticker.ini";
     private boolean isReady = false;
     /* максимальное количество устройств в компании, включая и данное устройство.
     *  в связи с этим, в интерфейсе, в разделе "Компания" должно быть текстовых полей и кнопок,
@@ -68,10 +68,19 @@ public class Model {
     protected void initialization(){
         if(!isInternerConnectionActive()){ return; }
         //Internet.Result internetAnswer;
-        // если хотя в файле настроек нет хотя бы одного из нижеследующих параметров, то содаём абсолютно новую запись
+        // если хотя в файле настроек нет хотя бы одного из нижеследующих параметров, то создаём абсолютно новую запись
         if(!(iniData.containsKey("userID")&&iniData.containsKey("deviceID")/*&&iniData.containsKey("noteID")*/)){
             createNewNote();
+        }else {
+            /* возможно, что в файле настроек параметры есть, но доступ к заметке закрыт (запрещён, круг не найден).
+            *  в этом случае тоже автоматически создаём новую заметку. */
+            // данный запрос используется исключительно для проверки доступности заметки
+            Internet.Result result = Internet.getNote(iniData.get("userID"), iniData.get("deviceID"));
+            if((result.dbStatus == Internet.DBMessage.ACCESS_DENIED)||(result.dbStatus == Internet.DBMessage.CIRCLE_NOT_FOUND)){
+                createNewNote();
+            }
         }
+        // таким образом, с этого момента, в любом случае заметка существует. Либо изначальная, либо созданная чуть выше.
         getInitialisationDataFromDB();
 
         isReady = true;
@@ -96,7 +105,7 @@ public class Model {
     }
 
 
-    /* Получить данные по СУЩЕСТВУЮЩЕЙ заметке из Базы Данных и настроить Модель и GUI
+    /* Получить данные по СУЩЕСТВУЮЩЕЙ и ДОСТУПНОЙ заметке из Базы Данных и настроить Модель и GUI
     * Т. е. либо заметка была создана непосредственно перед вызовом этой функции, либо была проведена проверка
     * её существования и доступности */
     private void getInitialisationDataFromDB(){
@@ -177,7 +186,7 @@ public class Model {
         /*-------------------*/
         if(!isInternerConnectionActive()){ return; }
 
-        Controller.gui.setFrameDisable();
+
         boolean isSynchronisation = true;
 
         // Map<String, Date> mapTimeStamps = Internet.getTimeStamps(iniData.get("userID"), iniData.get("deviceID"));
@@ -189,6 +198,7 @@ public class Model {
             // запоминаем метку устройства
             String thisDeviceLabel = devicesInCircle.get(iniData.get("deviceID")).deviceLabel;
             createNewNote();
+            // с этого момента заметка существует
             getInitialisationDataFromDB();
             DeviceInfo device = devicesInCircle.get(iniData.get("deviceID"));
             device.deviceLabel = thisDeviceLabel; // восстанавливаем метку устройства
@@ -316,8 +326,6 @@ public class Model {
                 devicesInCircle.get(pair.getKey()).labelTimeStamp = (Date) answer.content;
             }
         }
-
-        Controller.gui.setFrameEnable();
     }
 
     protected synchronized void InviteOrKickButtonPressed(JButton button){
@@ -350,7 +358,6 @@ public class Model {
             Controller.gui.invertTextOnButton(button); // инвертирование надписи на кнопке
             devicesInCircle.remove(buttonKey.get(button).deviceId); // удалить устройство из списка на клиенте
             //buttonKey.remove(button); // удалить из вспомогательной карты
-
             return;
         }
 
@@ -388,11 +395,16 @@ public class Model {
         // Отправляем запрос на сервер
         Internet.Result answer = Internet.addDeviceInCircle(iniData.get("userID"), iniData.get("deviceID"), password);
         if(answer.dbStatus != Internet.DBMessage.SUCCESS){
+            /* Если неудачная попытка вступить в круг (не важно по какой причине), просто выходим из этой функции,
+            оставляя старые параметры заметки.
+            Хотя, обязательно надо уведомить о событии пользователя. */
+            Controller.gui.putNewStatusInStatusString(GUI.StatusSender.ENTER_TO_CIRCLE, "Couldn't enter to circle.", 5);
             connectionErrorHandler(answer.dbStatus, "Получение userID круга, куда вступаем.");
             return;
         }
         // получив userID, меняем его на этом клиенте и загружаем заметку.
         iniData.put("userID", (String) answer.content);
+        // Инициализация возможна только у существущей и доступной заметки, что к этому моменту обеспечено.
         getInitialisationDataFromDB();
     }
 
@@ -404,9 +416,11 @@ public class Model {
         switch (message) {
             case ACCESS_DENIED:
                 /* Доступ к кругу запрещён. Данное устройство не в круге */
+                //Controller.gui.putNewStatusInStatusString(GUI.StatusSender.DB_ERRORS, "Access denied. Create new note.", 5);
                 break;
             case CIRCLE_NOT_FOUND:
                 /* Круг не найден */
+                //Controller.gui.putNewStatusInStatusString(GUI.StatusSender.DB_ERRORS, "Note not found. Create new.", 5);
                 break;
             case VOID:
                 /* Неопределённое значение. */

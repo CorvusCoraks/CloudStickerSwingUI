@@ -16,12 +16,12 @@ import java.util.Map;
 * */
 public class Controller {
     protected final static String DEFAULT_DATA_STAMP = "0000-00-00 00:00:00";
-    protected final static float PROGRAM_VERSION = 0.0f;
+    protected final static float PROGRAM_VERSION = 0.02f;
     protected final static int MAX_CHARS_IN_LABEL = 25;
     protected final static int MAX_CHARS_IN_NOTE = 1000; // максимальное количество символов в заметке
     protected final static int CHARS_IN_INVITATION_PASS = 5; // количество символов в пригласительном пароле
     protected final static String OS_NAME = System.getProperty("os.name");
-    protected final static String LAST_VER_FILE_LOCATION = "http://cn.gremal.ru/files/lastver/cloudnotes.zip";
+    protected final static String LAST_VER_FILE_LOCATION = "http://cn.gremal.ru/files/lastver/cloudsticker.zip";
     protected static TestInternetConnectionThread jerkThread;
     //protected List<ConnectedElements> connectionsModelWithGUI;
     //private Controller controller;
@@ -54,8 +54,10 @@ public class Controller {
         List<String> argsList = Arrays.asList(args);
         if(!argsList.contains("start")){
             //System.out.println("внтутри Контроллера");
+            /* ------------------------------------------------------------- */
             Process proc = Runtime.getRuntime().exec("java -jar start.jar");
             return;
+            /* ------------------------------------------------------------- */
         }
         //Internet.Result result = Internet.getNote("hkZ6gBomOdh6o9cX","D4gGlTVoScqSfvXZ");
 
@@ -125,7 +127,7 @@ public class Controller {
             float ver = Float.parseFloat((String) answer.content);
             if (PROGRAM_VERSION < ver) {
                 //gui.putNewStatusInStatusString(GUI.StatusSender.CONTROLLER, "New version CloudNotes ready.", 10);
-                File fileName = new File("./cloudnotes.zip");
+                File fileName = new File("./cloudsticker.zip");
                 // Если файл новоё версии уже есть в каталоге программы, то скачиваеть обновление не следует.
                 if (!fileName.exists()) {
                     byte[] fileContent = Internet.getLastVerCloudNotes(LAST_VER_FILE_LOCATION);
