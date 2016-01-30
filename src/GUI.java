@@ -54,7 +54,7 @@ public class GUI{
         // обязательно синхронизировать обращение к этому массиву!
         private Map<StatusSender, StatusStringObject> statusStringsArray = new HashMap<StatusSender, StatusStringObject>(); // идентификатор отправителя, статусное сообщениеж
         private JLabel statusStringLabel = new JLabel("Строка статуса");
-        //private JButton downloadButton = new JButton("Скачать свежий CloudNotes");
+        //private JButton downloadButton = new JButton("Скачать свежий CloudSticker");
         //private JTextField[] textFieldsWithDeviceNames = new JTextField[Controller.MAX_COMPANY_COUNT - 1];
         //private JButton[] buttonsWithDeviceNames = new JButton[Controller.MAX_COMPANY_COUNT - 1];
         //private JTextField invitationToCompanyTextField = new JTextField();
@@ -197,7 +197,7 @@ public class GUI{
             //JScrollPane jsp = new JScrollPane(scrollBarPanel);
             //jsp.setLayout(new ScrollPaneLayout());
             //jsp.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-            // JButton downloadButton = new JButton("Скачать свежий CloudNotes");
+            // JButton downloadButton = new JButton("Скачать свежий CloudSticker");
             //col.add(downloadButton);
             panel.add(BorderLayout.CENTER, col);
 
@@ -297,8 +297,8 @@ public class GUI{
                 // запись параметров графического интерфейса в массив, для дальнейшего занесения в ini-файл
                 Controller.model.iniData.put("mainWindowXPosition", String.valueOf((int) frame.getLocation().getX()));
                 Controller.model.iniData.put("mainWindowYPosition", String.valueOf((int) frame.getLocation().getY()));
-                Controller.model.iniData.put("mainWindowWidth", String.valueOf((int) frame.getWidth()));
-                Controller.model.iniData.put("mainWindowHeight", String.valueOf((int) frame.getHeight()));
+                Controller.model.iniData.put("mainWindowWidth", String.valueOf(frame.getWidth()));
+                Controller.model.iniData.put("mainWindowHeight", String.valueOf(frame.getHeight()));
 
                 // Controller.gui.frame.setCursor(new Cursor(Cursor.WAIT_CURSOR));
 

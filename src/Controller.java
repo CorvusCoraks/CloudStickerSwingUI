@@ -16,7 +16,7 @@ import java.util.Map;
 * */
 public class Controller {
     protected final static String DEFAULT_DATA_STAMP = "0000-00-00 00:00:00";
-    protected final static float PROGRAM_VERSION = 0.02f;
+    protected final static float PROGRAM_VERSION = 0.03f;
     protected final static int MAX_CHARS_IN_LABEL = 25;
     protected final static int MAX_CHARS_IN_NOTE = 1000; // максимальное количество символов в заметке
     protected final static int CHARS_IN_INVITATION_PASS = 5; // количество символов в пригласительном пароле
@@ -108,7 +108,7 @@ public class Controller {
             Internet.Result answer = Internet.getLastProgramVer();
             String ver = (String) answer.content;
             if (!ver.equals("null") && !ver.equals(PROGRAM_VERSION)) {
-                gui.putNewStatusInStatusString(GUI.StatusSender.CONTROLLER, "New version CloudNotes present. Please, update!", 10);
+                gui.putNewStatusInStatusString(GUI.StatusSender.CONTROLLER, "New version CloudSticker present. Please, update!", 10);
                 File fileName = new File("./lastversion.jar");
                 // if(fileName.exists()){ fileName.delete(); }
                 // Если файл новоё версии уже есть в каталоге программы, то скачиваеть обновление не следует.
@@ -126,7 +126,7 @@ public class Controller {
             Internet.Result answer = Internet.getLastProgramVer();
             float ver = Float.parseFloat((String) answer.content);
             if (PROGRAM_VERSION < ver) {
-                //gui.putNewStatusInStatusString(GUI.StatusSender.CONTROLLER, "New version CloudNotes ready.", 10);
+                //gui.putNewStatusInStatusString(GUI.StatusSender.CONTROLLER, "New version CloudSticker ready.", 10);
                 File fileName = new File("./cloudsticker.zip");
                 // Если файл новоё версии уже есть в каталоге программы, то скачиваеть обновление не следует.
                 if (!fileName.exists()) {
@@ -145,7 +145,7 @@ public class Controller {
             Internet.Result answer = Internet.sendStatistics(hash);
 /*            String ver = (String) answer.content;
             if (!ver.equals("null") && !ver.equals(PROGRAM_VERSION)) {
-                gui.putNewStatusInStatusString(GUI.StatusSender.CONTROLLER, "New version CloudNotes present. Please, update!", 10);
+                gui.putNewStatusInStatusString(GUI.StatusSender.CONTROLLER, "New version CloudSticker present. Please, update!", 10);
             }*/
         }
     }
