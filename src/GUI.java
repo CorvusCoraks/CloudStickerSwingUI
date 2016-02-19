@@ -11,8 +11,16 @@ import java.awt.event.*;
 import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.LogRecord;
+//import CloudStickerCore;
 
-public class GUI{
+/*TODO Сделать флаги изменения состояния, вместо вызовов функций из CloudStickerCore */
+public class GUI implements UISide{
+
+    public static void main(String[] args) {
+        // использование не планируется. Модуль, фактически, используется как библиотека
+    }
+
     //private int mainWindowWidth;
     //private int mainWindowHeight;
     //private int mainWindowXPosition;
@@ -23,7 +31,7 @@ public class GUI{
     // файл языковой локализации
     final static private String locFileName = "language.ini";
     // карта языковой локализации
-    protected Map<String, String> localisation = new HashMap<String, String>();
+    private Map<String, String> localisation = new HashMap<String, String>();
     /* Инициализация модели должна происходить после завершения создания GUI, так как модель получает ссылки на некоторые
     * элементы GUI. То есть, инициализация модели происходит только после того, когда флаг isGUIready станет равным true */
     //protected static boolean isGUIready = false;
@@ -46,7 +54,8 @@ public class GUI{
         private inBoxPairTextFieldAndButton invitationInputBox = new inBoxPairTextFieldAndButton("Ввести пароль для присоединения");
         //private JButton synchronisationButton = new JButton("Синхронизация через - 15 сек.");
         private JButton synchronisationButton = new JButton("Синхронизировать");
-        private JTextArea noteArea = new JTextArea();
+        private SwingUI.STextArea noteArea = new SwingUI.STextArea();
+        //private JTextArea noteArea = new JTextArea();
         /* стркока статуса не может быть пустой, иначе она сразу исчезает. То есть раскладка элементов в окне
          * начинает прыгать */
         private static final String BLANCK_STATUS_STRING = "   ";
@@ -221,25 +230,39 @@ public class GUI{
         class inBoxPairTextFieldAndButton{
             // ОБЯЗАТЕЛЬНО ограничить максимальную длину имени устройства
             private Box row = Box.createHorizontalBox();
-            private JTextField jtf = new JTextField();
-            private JButton jb = new JButton(localisation.get("btInviteToCircle"));
+            //private JTextField jtf = new JTextField();
+            //private JButton jb = new JButton(localisation.get("btInviteToCircle"));
+
+            private SwingUI.STextField stf = new SwingUI.STextField();
+            private SwingUI.SButton sb = new SwingUI.SButton();
+
 
             // этот конструктор делает Бокс без рамки
             protected inBoxPairTextFieldAndButton() {
-                row.add(jtf);
-                row.add(jb);
+                sb.setSText(localisation.get("btInviteToCircle"));
+                row.add(stf);
+                row.add(sb);
+                //row.add(jtf);
+                //row.add(jb);
             }
 
             // с помощью этого конструктора делается Бокс с рамкой с заголовком str
             protected inBoxPairTextFieldAndButton(String str){
-                row.add(jtf);
-                row.add(jb);
+                sb.setSText(localisation.get("btInviteToCircle"));
+                row.add(stf);
+                row.add(sb);
+                //row.add(jtf);
+                //row.add(jb);
                 row.setBorder(new TitledBorder(str));
             }
 
-            protected JTextField getTextField() { return jtf; }
+            protected SwingUI.STextField getTextField() { return stf; }
 
-            protected JButton getButton() { return jb; }
+            protected SwingUI.SButton getButton() { return sb; }
+
+            //protected JTextField getTextField() { return jtf; }
+
+            //protected JButton getButton() { return jb; }
 
             protected Box getRow() { return row; }
         }
@@ -295,11 +318,16 @@ public class GUI{
                 if(isCloseOperationRunned){ return; }else{ isCloseOperationRunned = true; }
 
                 // запись параметров графического интерфейса в массив, для дальнейшего занесения в ini-файл
+                CoreSide.putPairToIniDataMap("mainWindowXPosition", String.valueOf((int) frame.getLocation().getX()));
+                CoreSide.putPairToIniDataMap("mainWindowYPosition", String.valueOf((int) frame.getLocation().getY()));
+                CoreSide.putPairToIniDataMap("mainWindowWidth", String.valueOf(frame.getWidth()));
+                CoreSide.putPairToIniDataMap("mainWindowHeight", String.valueOf(frame.getHeight()));
+                /*
                 Controller.model.iniData.put("mainWindowXPosition", String.valueOf((int) frame.getLocation().getX()));
                 Controller.model.iniData.put("mainWindowYPosition", String.valueOf((int) frame.getLocation().getY()));
                 Controller.model.iniData.put("mainWindowWidth", String.valueOf(frame.getWidth()));
                 Controller.model.iniData.put("mainWindowHeight", String.valueOf(frame.getHeight()));
-
+                */
                 // Controller.gui.frame.setCursor(new Cursor(Cursor.WAIT_CURSOR));
 
 
@@ -313,10 +341,16 @@ public class GUI{
 
             class newThread extends Thread {
                 public void run() {
+                    CoreSide.setUIDisable();
+                    CoreSide.startSynchronization();
+                    CoreSide.writeInit();
+                    CoreSide.setUIEnable();
+                    /*
                     Controller.gui.setFrameDisable();
                     Controller.model.startSynchronization();
                     Controller.model.writeInit();
                     Controller.gui.setFrameEnable();
+                    */
                 }
             }
         }
@@ -335,7 +369,7 @@ public class GUI{
             @Override
             public void windowGainedFocus(WindowEvent e) {
                 //System.out.println("Окно в фокусе.");
-                if(Controller.model.isWasChangedTrue()){
+                if(CoreSide.isWasChangedTrue()){
                     // чтобы при активации события не запустить нить повторно (если она уже запущена)
                     Controller.jerkThread.controller.wakeUp();
                 }
@@ -358,11 +392,11 @@ public class GUI{
             class newThread extends Thread
             {
                 public void run(){
-                    Controller.gui.setFrameDisable();
-                    Controller.model.EnterToCircleButtonPressed();
+                    CoreSide.setUIDisable();
+                    CoreSide.EnterToCircleButtonPressed();
                     // пароль отработан, можно удалить его из GUI
                     frame.getInvitationInputBox().getTextField().setText("");
-                    Controller.gui.setFrameEnable();
+                    CoreSide.setUIEnable();
                 }
             }
         }
@@ -377,9 +411,9 @@ public class GUI{
             class newThread extends Thread
             {
                 public void run(){
-                    Controller.gui.setFrameDisable();
-                    Controller.model.startSynchronization();
-                    Controller.gui.setFrameEnable();
+                    CoreSide.setUIDisable();
+                    CoreSide.startSynchronization();
+                    CoreSide.setUIEnable();
                 }
             }
         }
@@ -396,9 +430,10 @@ public class GUI{
                 ActionEvent ev;
 
                 public void run() {
-                    Controller.gui.setFrameDisable();
-                    Controller.model.InviteOrKickButtonPressed((JButton) ev.getSource());
-                    Controller.gui.setFrameEnable();
+                    CoreSide.setUIDisable();
+                    //Controller.model.InviteOrKickButtonPressed((JButton) ev.getSource());
+                    CoreSide.InviteOrKickButtonPressed((AbstractUIControl) ev.getSource());
+                    CoreSide.setUIEnable();
                 }
 
                 public newThread() {}
@@ -419,11 +454,18 @@ public class GUI{
                 CaretEvent ev;
 
                 public void run(){
+                    SwingUI.STextField stf = (SwingUI.STextField) ev.getSource();
+                    if(CoreSide.isDeviceLabelEquals(stf)) {
+                        // меняем флаг изменения только тогда, когда реально содержимое метки в текстовом поле отличается от содержимого метки в модели
+                        CoreSide.setDeviceLabelWasChangedFlagToTrue(stf);
+                    }
+                    /*
                     JTextField jtf = (JTextField) ev.getSource();
                     if(Controller.model.isDeviceLabelEquals(jtf)) {
                         // меняем флаг изменения только тогда, когда реально содержимое метки в текстовом поле отличается от содержимого метки в модели
                         Controller.model.setDeviceLabelWasChangedFlagToTrue(jtf);
                     }
+                    */
                 }
 
                 public newThread() {}
@@ -443,7 +485,7 @@ public class GUI{
             {
                 public void run(){
                     // меняем флаг изменения только тогда, когда реально содержимое заметки в текстовом поле отличается от содержимого заметки в модели
-                    if(!Controller.model.isNoteEquals(frame.noteArea.getText())){ Controller.model.setNoteWasChangedFlagToTrue(); }
+                    if(!CoreSide.isNoteEquals(frame.noteArea.getText())){ CoreSide.setNoteWasChangedFlagToTrue(); }
                     int chars = Controller.MAX_CHARS_IN_NOTE - frame.noteArea.getText().length();
                     if (chars > 0){frame.statusStringsArray.put(StatusSender.NOTE_LENGTH_CONTROL, new StatusStringObject(String.format("Остаток - %d символов", chars)));}
                     else if(chars < 0){ frame.statusStringsArray.put(StatusSender.NOTE_LENGTH_CONTROL, new StatusStringObject(String.format("Лишние - %d символов", (-1)*chars))); }
@@ -493,23 +535,23 @@ public class GUI{
 
     /* Это функция проверки связи для вызова из внешних модулей. Формирование статусной строки в GUI,
     запуск процедур активации и деактивации элементов GUI */
-    protected void setInternetConnectionStatuses(InternetConnectionTest.InternetConnectionMessage status){
+    public void setInternetConnectionStatuses(InternetConnectionTest.InternetConnectionMessage status){
         //InternetConnectionTest.InternerConnectionMessage status = InternetConnectionTest.isCloudReachable();
 
         if(status != InternetConnectionTest.InternetConnectionMessage.YES) {
-            if (isFrameEnabled()) { setFrameDisable(); }
+            if (isFrameEnabled()) { setUIDisable(); }
 
             if(status == InternetConnectionTest.InternetConnectionMessage.CLOUD_NOT_FOUND){
-                putNewStatusInStatusString(GUI.StatusSender.TEST_INTERNET_CONNECTION, "Облако не отвечает.");
+                putNewStatusInStatusString(StatusSender.TEST_INTERNET_CONNECTION, "Облако не отвечает.");
             }else if(status == InternetConnectionTest.InternetConnectionMessage.NO){
-                putNewStatusInStatusString(GUI.StatusSender.TEST_INTERNET_CONNECTION, "Доступ в интернет отсутствует.");
+                putNewStatusInStatusString(StatusSender.TEST_INTERNET_CONNECTION, "Доступ в интернет отсутствует.");
             }
             //return false;
         }else {
             if (!isFrameEnabled()) {
-                setFrameEnable();
+                setUIEnable();
             }
-            putNewStatusInStatusString(GUI.StatusSender.TEST_INTERNET_CONNECTION, "Облако на связи.", 5);
+            putNewStatusInStatusString(StatusSender.TEST_INTERNET_CONNECTION, "Облако на связи.", 5);
         }
 
         //return true;
@@ -526,6 +568,7 @@ public class GUI{
     protected GUI()
     {
         // считывание языковых данных из файла идёт первым, так как эти данные нужны уже при создании объекта главного окна
+        CoreSide.getLogFileHandler().publish(new LogRecord(CoreSide.getLogLevel(), "GUI. Before localisation."));
         localisation();
         // Map локализации заполнена? Теперь можно создавать главное окно
         frame = new MainWindow(String.format("GreMal's CloudSticker, ver. %s", Controller.PROGRAM_VERSION));
@@ -535,8 +578,27 @@ public class GUI{
     }
 
     /* Функция читает планируемые параметры GUI из соответствующего Мэпа контроллера */
-    private void setInitGUIParameters()
+    public void setInitGUIParameters()
     {
+        // Устанавливаем размеры окна
+        if((CoreSide.getPairFromIniDataMap("mainWindowWidth") != null)&&(CoreSide.getPairFromIniDataMap("mainWindowHeight") != null)){
+            frame.setSize(Integer.parseInt(CoreSide.getPairFromIniDataMap("mainWindowWidth")),
+                    Integer.parseInt(CoreSide.getPairFromIniDataMap("mainWindowHeight")));
+        }else{
+            CoreSide.putPairToIniDataMap("mainWindowWidth", "200");
+            CoreSide.putPairToIniDataMap("mainWindowHeight", "200");
+        }
+
+        // Устанавливаем положение окна
+        if((CoreSide.getPairFromIniDataMap("mainWindowXPosition") != null)&&(CoreSide.getPairFromIniDataMap("mainWindowYPosition") != null)){
+            frame.setLocation(Integer.parseInt(CoreSide.getPairFromIniDataMap("mainWindowXPosition")),
+                    Integer.parseInt(CoreSide.getPairFromIniDataMap("mainWindowYPosition")));
+        }else{
+            CoreSide.putPairToIniDataMap("mainWindowXPosition", "0");
+            CoreSide.putPairToIniDataMap("mainWindowYPosition", "0");
+        }
+
+        /*
         // Устанавливаем размеры окна
         if ( Controller.model.iniData.containsKey("mainWindowWidth") && Controller.model.iniData.containsKey("mainWindowHeight") )
         {} else
@@ -556,14 +618,14 @@ public class GUI{
         }
         frame.setLocation(Integer.parseInt(Controller.model.iniData.get("mainWindowXPosition")),
                 Integer.parseInt(Controller.model.iniData.get("mainWindowYPosition")));
-
+        */
     }
 
     // чтение из файла данных локализации (язык интерфейса)
 
     private void localisation(){
         try{
-            localisation = Tools.readFromIniFile(locFileName);
+            localisation = CoreSide.readFromIniFile(locFileName);
         }catch(FileNotFoundException ex){/* Отработать */}
         catch(IOException ex){/* Отработать */}
     }
@@ -574,45 +636,91 @@ public class GUI{
     /* **********************************************************************************/
     /* Интерфейсные функции для того, чтобы Model мог получить необходимые ссылки из GUI */
     /* **********************************************************************************/
-    protected boolean getReady(){ return this.isReady; }
-    protected JTextField getThisDeviceTextField(){ return frame.getCurrentDeviceBox().getTextField(); }
-    protected JButton getThisDeviceButton() { return frame.getCurrentDeviceBox().getButton(); }
-    protected JTextField[] getOtherCircleDevicesTextField(){
-        //GUI.MainWindow.inBoxPairTextFieldAndButton[] array = frame.getOtherDevecesBoxes();
-        JTextField[] result = new JTextField[Model.MAX_COMPANY_COUNT - 1];
+    // Получить статус готовности GUI
+    public boolean getReady(){ return this.isReady; }
+    // Поле с именем текущего устройства
+    // protected JTextField getThisDeviceTextField(){ return frame.getCurrentDeviceBox().getTextField(); }
+    public AbstractUIControl getThisDeviceTextField(){ return frame.getCurrentDeviceBox().getTextField(); }
+    // Кнопка сохранения имени данного устройства (рядом с полем данного устройства)
+    // protected JButton getThisDeviceButton() { return frame.getCurrentDeviceBox().getButton(); }
+    public AbstractUIControl getThisDeviceButton(){ return frame.getCurrentDeviceBox().getButton(); }
+    // Получить текстовые поля других устройств
+    public AbstractUIControl[] getOtherCircleDevicesTextField(){
+        SwingUI.STextField[] result = new SwingUI.STextField[Model.MAX_COMPANY_COUNT - 1];
         for(int i = 0; i < result.length; i++){ result[i] = frame.getOtherDevecesBoxes()[i].getTextField(); }
         return result;
     }
-    protected JButton[] getOtherCircleDevicesButton(){
-        JButton[] result = new JButton[Model.MAX_COMPANY_COUNT - 1];
+/*    protected JTextField[] getOtherCircleDevicesTextField(){
+        JTextField[] result = new JTextField[Model.MAX_COMPANY_COUNT - 1];
+        for(int i = 0; i < result.length; i++){ result[i] = frame.getOtherDevecesBoxes()[i].getTextField(); }
+        return result;
+    }*/
+    // Получить кнопки рядом с текстовыми полями других устройств
+    public AbstractUIControl[] getOtherCircleDevicesButton(){
+        SwingUI.SButton[] result = new SwingUI.SButton[Model.MAX_COMPANY_COUNT - 1];
         for(int i = 0; i < result.length; i++){ result[i] = frame.getOtherDevecesBoxes()[i].getButton(); }
         return result;
     }
-    protected JButton getSynchronisationButton(){ return frame.getSynchronisationButton(); }
-    protected JTextArea getNoteTextArea(){ return frame.noteArea; }
+/*    protected JButton[] getOtherCircleDevicesButton(){
+        JButton[] result = new JButton[Model.MAX_COMPANY_COUNT - 1];
+        for(int i = 0; i < result.length; i++){ result[i] = frame.getOtherDevecesBoxes()[i].getButton(); }
+        return result;
+    }*/
+    //protected JButton getSynchronisationButton(){ return frame.getSynchronisationButton(); }
+    public AbstractUIControl getNoteTextArea(){ return frame.noteArea; }
+    //protected JTextArea getNoteTextArea(){ return frame.noteArea; }
     //public void setThisDeviceLable(String label){ frame.getCurrentDeviceBox().getTextField().setText(label); }
     //public String[] getCircleDevicesTextLabels(){}
     //public void
-    protected JTextField getTextPaired(JButton button){
+    public AbstractUIControl getTextPaired(AbstractUIControl auic){
+        SwingUI.SButton button = (SwingUI.SButton) auic;
         MainWindow.inBoxPairTextFieldAndButton[] pairs = frame.getOtherDevecesBoxes();
         for(int i = 0; i < pairs.length; i++){
             if(pairs[i].getButton() == button){ return pairs[i].getTextField(); }
         }
-        //return new JTextField();
         return null;
     }
-    protected JTextField getInvitationTextField(){ return frame.getInvitationInputBox().getTextField(); }
+    /*protected JTextField getTextPaired(JButton button){
+        MainWindow.inBoxPairTextFieldAndButton[] pairs = frame.getOtherDevecesBoxes();
+        for(int i = 0; i < pairs.length; i++){
+            if(pairs[i].getButton() == button){ return pairs[i].getTextField(); }
+        }
+        return null;
+    }*/
+    public AbstractUIControl getInvitationTextField(){ return frame.getInvitationInputBox().getTextField(); }
+    //protected JTextField getInvitationTextField(){ return frame.getInvitationInputBox().getTextField(); }
     // возвращает свободное текстовое поле, в GUI-таблице устройств круга
-    protected JTextField getFreeOtherDeviceTextField(){
+    public AbstractUIControl getFreeOtherDeviceTextField(){
+        for(int i = 0; i < frame.arrayTextFieldsAndButtons.length; i++){
+            if(CoreSide.isTextFieldFree(frame.arrayTextFieldsAndButtons[i].getTextField())){
+                return frame.arrayTextFieldsAndButtons[i].getTextField();
+            }
+        }
+        SwingUI.STextField result = new SwingUI.STextField();
+        result.setSText("AllTextFieldsOccupied");
+        return result; // Отработать ошибку "все поля заняты"
+    }
+    /*protected JTextField getFreeOtherDeviceTextField(){
         for(int i = 0; i < frame.arrayTextFieldsAndButtons.length; i++){
             if(Controller.model.isTextFieldFree(frame.arrayTextFieldsAndButtons[i].getTextField())){
                 return frame.arrayTextFieldsAndButtons[i].getTextField();
             }
         }
         return new JTextField(); // только шоб не ругался компиллятор
-    }
+    }*/
     // возвращает ссылку на кнопку по парному текстовому полю
-    protected JButton getButtonByTextField(JTextField jtf){
+    public AbstractUIControl getButtonByTextField(AbstractUIControl auic){
+        SwingUI.STextField stf = (SwingUI.STextField) auic;
+        if(frame.getCurrentDeviceBox().getTextField() == stf){ return frame.getCurrentDeviceBox().getButton(); }
+        if(frame.getInvitationInputBox().getTextField() == stf) { return frame.getInvitationInputBox().getButton(); }
+        for(int i = 0; i < frame.arrayTextFieldsAndButtons.length; i++){
+            if(stf == frame.arrayTextFieldsAndButtons[i].getTextField()){
+                return frame.arrayTextFieldsAndButtons[i].getButton();
+            }
+        }
+        return new SwingUI.SButton(); // только шоб не ругался компиллятор
+    }
+    /*protected JButton getButtonByTextField(JTextField jtf){
         if(frame.getCurrentDeviceBox().getTextField() == jtf){ return frame.getCurrentDeviceBox().getButton(); }
         if(frame.getInvitationInputBox().getTextField() == jtf) { return frame.getInvitationInputBox().getButton(); }
         for(int i = 0; i < frame.arrayTextFieldsAndButtons.length; i++){
@@ -621,8 +729,9 @@ public class GUI{
             }
         }
         return new JButton(); // только шоб не ругался компиллятор
-    }
+    }*/
     // возвращает ссылку на текстовое поле, по парной кнопке
+    /*
     protected JTextField getTextFieldByButton(JButton btn){
         if(frame.getCurrentDeviceBox().getButton() == btn){ return frame.getCurrentDeviceBox().getTextField(); }
         if(frame.getInvitationInputBox().getButton() == btn) { return frame.getInvitationInputBox().getTextField(); }
@@ -633,16 +742,22 @@ public class GUI{
         }
         return new JTextField(); // только шоб не ругался компиллятор
     }
+    */
     // инвертируем текст кнопок Kick/Invite
-    protected void invertTextOnButton(JButton jbtn){
+    public void invertTextOnButton(AbstractUIControl auic){
+        SwingUI.SButton sbtn = (SwingUI.SButton) auic;
+        if(sbtn.getSText() == localisation.get("btInviteToCircle")){ sbtn.setSText(localisation.get("btKickFromCircle")); }
+        else{ sbtn.setSText(localisation.get("btInviteToCircle")); }
+    }
+/*    protected void invertTextOnButton(JButton jbtn){
         if(jbtn.getText() == localisation.get("btInviteToCircle")){ jbtn.setText(localisation.get("btKickFromCircle")); }
         else{ jbtn.setText(localisation.get("btInviteToCircle")); }
-    }
+    }*/
 /*    Чистка свободного текстового поля в GUI-массиве устройств круга и, если на парной кнопке осталась старая
     надпись Kick, меняем её на Invite */
-    protected void clearFreeTextField(){
+    public void clearFreeTextField(){
         for(int i = 0; i < frame.arrayTextFieldsAndButtons.length; i++){
-            if(Controller.model.isTextFieldFree(frame.arrayTextFieldsAndButtons[i].getTextField())){
+            if(CoreSide.isTextFieldFree(frame.arrayTextFieldsAndButtons[i].getTextField())){
                 frame.arrayTextFieldsAndButtons[i].getTextField().setText("");
                 frame.arrayTextFieldsAndButtons[i].getButton().setText(localisation.get("btInviteToCircle"));
             }
@@ -650,7 +765,7 @@ public class GUI{
     }
 
     /* Сделать доступным элементы окна программы */
-    protected synchronized void setFrameEnable(){
+    protected synchronized void setUIEnable(){
         if(frame.synchronisationButton.isEnabled()){ return; } // если уже другой нитью всё установлено. Не фига по второму разу
         frame.noteArea.setEnabled(true);
         frame.getInvitationInputBox().getButton().setEnabled(true);
@@ -665,7 +780,7 @@ public class GUI{
     }
 
     /* Сделать недоступными элементы окна программы */
-    protected synchronized void setFrameDisable(){
+    protected synchronized void setUIDisable(){
         if(!frame.synchronisationButton.isEnabled()){ return; } // если уже другой нитью всё установлено. Не фига по второму разу
         frame.noteArea.setEnabled(false);
         frame.getInvitationInputBox().getButton().setEnabled(false);
@@ -683,7 +798,7 @@ public class GUI{
     protected boolean isFrameEnabled(){ return frame.synchronisationButton.isEnabled(); }
 
     // вставить новый статус в массив статусов
-    protected void putNewStatusInStatusString(StatusSender sender, String status)
+    public void putNewStatusInStatusString(StatusSender sender, String status)
     {
         synchronized (frame.statusStringsArray){ frame.statusStringsArray.put(sender, new StatusStringObject(status)); }
     }
@@ -698,12 +813,17 @@ public class GUI{
         synchronized (frame.statusStringsArray){ frame.statusStringsArray.remove(sender); }
     }
 
-    enum StatusSender{
+    // Возвращает переведённую строку из массива локализации по её ключу
+    public String getLocalisationValueByKey(String key){
+        return this.localisation.get(key);
+    }
+
+    /*enum StatusSender{
         TEST_INTERNET_CONNECTION,
         NOTE_LENGTH_CONTROL,
         LABEL_LENGTH_CONTROL,
         CONTROLLER,
         ENTER_TO_CIRCLE
         //DB_ERRORS
-    }
+    }*/
 }
