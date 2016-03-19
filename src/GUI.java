@@ -2,20 +2,31 @@
  * Created by GreMal on 21.02.2015.
  */
 
+import ru.gremal.cs.common.interfaces.CoreSide;
+import ru.gremal.cs.common.interfaces.UISide;
+import ru.gremal.cs.common.tools.CommonTools;
+import ru.gremal.cs.common.tools.InternetConnectionMessage;
+import ru.gremal.cs.common.tools.StatusSender;
+import ru.gremal.cs.common.ui.AbstractUI;
+import ru.gremal.cs.common.ui.AbstractUIControl;
+//import ru.gremal.cs.common.ui.AbstractUI;
+
 import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import javax.swing.event.CaretEvent;
 import javax.swing.event.CaretListener;
 import java.awt.*;
 import java.awt.event.*;
-import java.io.*;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.LogRecord;
 //import CloudStickerCore;
 
-/*TODO Сделать флаги изменения состояния, вместо вызовов функций из CloudStickerCore */
-public class GUI implements UISide{
+public class GUI extends AbstractUI {
+
+    //private CoreSide core;
 
     public static void main(String[] args) {
         // использование не планируется. Модуль, фактически, используется как библиотека
@@ -25,7 +36,7 @@ public class GUI implements UISide{
     //private int mainWindowHeight;
     //private int mainWindowXPosition;
     //private int mainWindowYPosition;
-    private boolean isReady = false;
+    //private boolean isReady = false; // флаг готовности UI к работе
     private MainWindow frame;
 
     // файл языковой локализации
@@ -49,7 +60,7 @@ public class GUI implements UISide{
     {
         private boolean isCloseOperationRunned = false; // запущен ли протокол закрытия окна программы?
         final static private int TIME_FOR_ONE_STATUS = 4000; // миллисикунды, время показа одного статуса
-        private inBoxPairTextFieldAndButton[] arrayTextFieldsAndButtons = new inBoxPairTextFieldAndButton[Model.MAX_COMPANY_COUNT - 1];
+        private inBoxPairTextFieldAndButton[] arrayTextFieldsAndButtons = new inBoxPairTextFieldAndButton[getMaxCompanyCount() - 1];
         private inBoxPairTextFieldAndButton currentDevice = new inBoxPairTextFieldAndButton("Этот Ваш компьютер");
         private inBoxPairTextFieldAndButton invitationInputBox = new inBoxPairTextFieldAndButton("Ввести пароль для присоединения");
         //private JButton synchronisationButton = new JButton("Синхронизация через - 15 сек.");
@@ -100,7 +111,7 @@ public class GUI implements UISide{
             this.addListeners();
             (new rotateStausList()).start();
             //isGUIready = true;
-            isReady = true;
+            setReady(true);
         }
 
         private JTabbedPane getMainTabbedPane(){
@@ -317,17 +328,21 @@ public class GUI implements UISide{
                 а это - новые бессмысленные нити и уже и так не быстро. */
                 if(isCloseOperationRunned){ return; }else{ isCloseOperationRunned = true; }
 
+                // блокируем окно
+                setUIDisable();
                 // запись параметров графического интерфейса в массив, для дальнейшего занесения в ini-файл
-                CoreSide.putPairToIniDataMap("mainWindowXPosition", String.valueOf((int) frame.getLocation().getX()));
-                CoreSide.putPairToIniDataMap("mainWindowYPosition", String.valueOf((int) frame.getLocation().getY()));
-                CoreSide.putPairToIniDataMap("mainWindowWidth", String.valueOf(frame.getWidth()));
-                CoreSide.putPairToIniDataMap("mainWindowHeight", String.valueOf(frame.getHeight()));
                 /*
-                Controller.model.iniData.put("mainWindowXPosition", String.valueOf((int) frame.getLocation().getX()));
-                Controller.model.iniData.put("mainWindowYPosition", String.valueOf((int) frame.getLocation().getY()));
-                Controller.model.iniData.put("mainWindowWidth", String.valueOf(frame.getWidth()));
-                Controller.model.iniData.put("mainWindowHeight", String.valueOf(frame.getHeight()));
+                putIniDataInMap("UI_mainWindowXPosition", String.valueOf((int) frame.getLocation().getX()));
+                putIniDataInMap("UI_mainWindowYPosition", String.valueOf((int) frame.getLocation().getY()));
+                putIniDataInMap("UI_mainWindowWidth", String.valueOf(frame.getWidth()));
+                putIniDataInMap("UI_mainWindowHeight", String.valueOf(frame.getHeight()));
                 */
+
+                core.putPairToIniDataMap("mainWindowXPosition", String.valueOf((int) frame.getLocation().getX()));
+                core.putPairToIniDataMap("mainWindowYPosition", String.valueOf((int) frame.getLocation().getY()));
+                core.putPairToIniDataMap("mainWindowWidth", String.valueOf(frame.getWidth()));
+                core.putPairToIniDataMap("mainWindowHeight", String.valueOf(frame.getHeight()));
+
                 // Controller.gui.frame.setCursor(new Cursor(Cursor.WAIT_CURSOR));
 
 
@@ -337,14 +352,48 @@ public class GUI implements UISide{
                 try {
                     thread.join();
                 } catch (InterruptedException ignore) { /*NOP*/ }
+                setUIEnable(); // может убрать эту активацию за ненадобностью?
             }
 
             class newThread extends Thread {
                 public void run() {
-                    CoreSide.setUIDisable();
-                    CoreSide.startSynchronization();
-                    CoreSide.writeInit();
-                    CoreSide.setUIEnable();
+                    // Устанавливаем для Core флаг на закрытие приложения
+                    // CommunicationChannal CloseWindowChannal;
+                    // boolean waiting = true;
+                    /*
+                    while(true) {
+                        // цикл на время пока данный канал кем-то занят. Т. е. ждём освобождения канала
+                        // проверка на доступность и необходимые в этом случае действия, производится в одном блоке synchronized
+                        synchronized (getCloseWindowCommandAgreeChannal()) {
+                            if (!getCloseWindowCommandAgreeChannal().isOrder()) {
+                                getCloseWindowCommandAgreeChannal().setOrder(true);
+                                break;
+                            }
+                        }
+                        try{ sleep(10); }catch (InterruptedException ignore){}
+                    while(!getCloseWindowCommandAgreeChannal().isReport()){
+                        // пока из Core не пришло разрешение на закрытие UI, UI заморожено
+                        try{ sleep(10); }catch (InterruptedException ignore){}
+                    }
+                    synchronized (getCloseWindowCommandAgreeChannal()) {
+                        getCloseWindowCommandAgreeChannal().setReport(false);
+                        getCloseWindowCommandAgreeChannal().setOrder(false);
+                    }
+                        */
+                    // setCloseWindowCommand(true);
+                    try {
+                        core.startSynchronization();
+                    } catch (InterruptedException ignore) {
+                        /* NOP */
+                    }
+                    core.writeInit();
+                    /*
+                    setUIPaused(true);
+                    while(getUIPaused()){
+                        try{ sleep(10); }catch (InterruptedException ignore){  }
+                    }
+                    */
+                    /* */
                     /*
                     Controller.gui.setFrameDisable();
                     Controller.model.startSynchronization();
@@ -369,16 +418,24 @@ public class GUI implements UISide{
             @Override
             public void windowGainedFocus(WindowEvent e) {
                 //System.out.println("Окно в фокусе.");
-                if(CoreSide.isWasChangedTrue()){
+                // if(getIsWasChanged()){
+                if (core.isWasChangedTrue()&&!core.isJerkThreadActive()){
+                //if((getIsNoteWasChanged())||(getIsDeveceLabelWasChanged())){
                     // чтобы при активации события не запустить нить повторно (если она уже запущена)
-                    Controller.jerkThread.controller.wakeUp();
+                    //Controller.jerkThread.controller.wakeUp();
+                    // ПРОСНУТЬСЯ!
+                    //setJerkThreadWakeUpCommand(true);
+                    core.jerkThreadWakeUp();
                 }
             }
 
             @Override
             public void windowLostFocus(WindowEvent e) {
                 //System.out.println("Окно не в фокусе.");
-                Controller.jerkThread.controller.pause();
+                //Controller.jerkThread.controller.pause();
+                // СПАТЬ!
+                //setJerkThreadWakeUpCommand(false);
+                core.jerkThreadSleep();
             }
         }
 
@@ -392,16 +449,24 @@ public class GUI implements UISide{
             class newThread extends Thread
             {
                 public void run(){
-                    CoreSide.setUIDisable();
-                    CoreSide.EnterToCircleButtonPressed();
+                    setUIDisable();
+                    core.enterToCircleButtonPressed();
+                    /*
+                    setEnterToCircleButtonPressed(true);
+                    try{
+                        while (isEnterToCircleButtonPressed()){ sleep(10); }
+                    }catch(InterruptedException ignore){}
+                    */
+                    //CoreSide.EnterToCircleButtonPressed();
                     // пароль отработан, можно удалить его из GUI
-                    frame.getInvitationInputBox().getTextField().setText("");
-                    CoreSide.setUIEnable();
+                    frame.getInvitationInputBox().getTextField().setSText("");
+                    setUIEnable();
                 }
             }
         }
 
         /* Перехват события "нажатие кнопки Синхронизации */
+        /* todo после нажатия кнопки Синхронизация, Core должен запрашивать содержимое полей UI, чтобы сохранить свежайшие данные */
         class SynchronisationButtonListener implements ActionListener
         {
             public void actionPerformed(ActionEvent Ev){
@@ -411,9 +476,20 @@ public class GUI implements UISide{
             class newThread extends Thread
             {
                 public void run(){
-                    CoreSide.setUIDisable();
-                    CoreSide.startSynchronization();
-                    CoreSide.setUIEnable();
+                    setUIDisable();
+                    //CoreSide.startSynchronization();
+                    try {
+                        core.startSynchronization();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                    /*
+                    setStartSynchronizationButtonPressed(true);
+                    try{
+                        while (isStartSynchronizationCommand()){ sleep(10); }
+                    }catch(InterruptedException ignore){}
+                    */
+                    setUIEnable();
                 }
             }
         }
@@ -430,10 +506,17 @@ public class GUI implements UISide{
                 ActionEvent ev;
 
                 public void run() {
-                    CoreSide.setUIDisable();
+                    setUIDisable();
                     //Controller.model.InviteOrKickButtonPressed((JButton) ev.getSource());
-                    CoreSide.InviteOrKickButtonPressed((AbstractUIControl) ev.getSource());
-                    CoreSide.setUIEnable();
+                    //CoreSide.InviteOrKickButtonPressed((AbstractUIControl) ev.getSource());
+                    core.inviteOrKickButtonPressed((AbstractUIControl) ev.getSource());
+                    /*
+                    setInviteOrKickButtonPressed((AbstractUIControl) ev.getSource());
+                    try{
+                        while (InviteOrKickButtonPressed() != null){ sleep(10); }
+                    }catch(InterruptedException ignore){}
+                    */
+                    setUIEnable();
                 }
 
                 public newThread() {}
@@ -454,11 +537,33 @@ public class GUI implements UISide{
                 CaretEvent ev;
 
                 public void run(){
-                    SwingUI.STextField stf = (SwingUI.STextField) ev.getSource();
-                    if(CoreSide.isDeviceLabelEquals(stf)) {
-                        // меняем флаг изменения только тогда, когда реально содержимое метки в текстовом поле отличается от содержимого метки в модели
-                        CoreSide.setDeviceLabelWasChangedFlagToTrue(stf);
-                    }
+                    // SwingUI.STextField stf = (SwingUI.STextField) ev.getSource();
+                    /* При каждом срабатывании данного события, запускается отдельная нить, с инкрементацией соответствующего счётчика нитей */
+                    new Thread(){
+                        /* todo возможно излишняя нить в нити */
+                        // запускаем нить отсчёта паузы с момента данного изменения
+                        SwingUI.STextField stf = (SwingUI.STextField) ev.getSource();
+                        @Override
+                        public void run() {
+                            try{
+                                //super.run();
+                                // увеличиваем счётчик процессов
+                                stf.incChangeEventCounter();
+                                // ждём отведённое время
+                                sleep(FIELD_CHANGE_TIMEOUT);
+                                // уменьшаем счётчик процессов
+                                // int counter = stf.decChangeEventCounter();
+                                // если на счётчике ноль, значит, это - последняя нить. Интервал времени от последнего изменения выдержан.
+                                if(stf.decChangeEventCounter() == 0){
+                                    //setIsDeviceLabelWasChanged(true);
+                                    core.setDeviceLabelWasChangedFlagToTrue(stf);
+                                }
+                            }catch (InterruptedException ignore){}
+                        }
+                    }.start();
+                    //if(CoreSide.isDeviceLabelEquals(stf)) {
+                    //CoreSide.setDeviceLabelWasChangedFlagToTrue(stf);
+                    //}
                     /*
                     JTextField jtf = (JTextField) ev.getSource();
                     if(Controller.model.isDeviceLabelEquals(jtf)) {
@@ -484,9 +589,38 @@ public class GUI implements UISide{
             class newThread extends Thread
             {
                 public void run(){
+                    new Thread(){
+                        /* todo возможно излишняя нить в нити */
+                        // запускаем нить отсчёта паузы с момента данного изменения
+                        @Override
+                        public void run() {
+                            try{
+                                //super.run();
+                                // увеличиваем счётчик процессов
+                                // stf.incChangeEventCounter();
+                                frame.noteArea.incChangeEventCounter();
+                                // ждём отведённое время
+                                sleep(FIELD_CHANGE_TIMEOUT);
+                                // уменьшаем счётчик процессов
+                                // int counter = stf.decChangeEventCounter();
+                                // если на счётчике ноль, значит, это - последняя нить. Интервал времени от последнего изменения выдержан.
+                                if(frame.noteArea.decChangeEventCounter() == 0){
+                                    //while (frame.noteArea.getIsNoteWasChanged()){
+                                        /* кто-то уже выставил этот флаг, а значит, возможно,
+                                        уже запущен процесс связи с Core и наши изменения могут "пролететь" мимо.
+                                         */
+                                        //sleep(5);
+                                    //}
+                                    //setIsNoteWasChanged(true);
+                                    core.setNoteWasChangedFlagToTrue();
+                                }
+                            }catch (InterruptedException ignore){ /*NOP*/ }
+                        }
+                    }.start();
+
                     // меняем флаг изменения только тогда, когда реально содержимое заметки в текстовом поле отличается от содержимого заметки в модели
-                    if(!CoreSide.isNoteEquals(frame.noteArea.getText())){ CoreSide.setNoteWasChangedFlagToTrue(); }
-                    int chars = Controller.MAX_CHARS_IN_NOTE - frame.noteArea.getText().length();
+                    //if(!CoreSide.isNoteEquals(frame.noteArea.getText())){ CoreSide.setNoteWasChangedFlagToTrue(); }
+                    int chars = getMaxCharsInNote() - frame.noteArea.getText().length();
                     if (chars > 0){frame.statusStringsArray.put(StatusSender.NOTE_LENGTH_CONTROL, new StatusStringObject(String.format("Остаток - %d символов", chars)));}
                     else if(chars < 0){ frame.statusStringsArray.put(StatusSender.NOTE_LENGTH_CONTROL, new StatusStringObject(String.format("Лишние - %d символов", (-1)*chars))); }
                     else{ frame.statusStringsArray.remove(StatusSender.NOTE_LENGTH_CONTROL); }
@@ -535,15 +669,15 @@ public class GUI implements UISide{
 
     /* Это функция проверки связи для вызова из внешних модулей. Формирование статусной строки в GUI,
     запуск процедур активации и деактивации элементов GUI */
-    public void setInternetConnectionStatuses(InternetConnectionTest.InternetConnectionMessage status){
+    public void setInternetConnectionStatuses(InternetConnectionMessage status){
         //InternetConnectionTest.InternerConnectionMessage status = InternetConnectionTest.isCloudReachable();
 
-        if(status != InternetConnectionTest.InternetConnectionMessage.YES) {
+        if(status != InternetConnectionMessage.YES) {
             if (isFrameEnabled()) { setUIDisable(); }
 
-            if(status == InternetConnectionTest.InternetConnectionMessage.CLOUD_NOT_FOUND){
+            if(status == InternetConnectionMessage.CLOUD_NOT_FOUND){
                 putNewStatusInStatusString(StatusSender.TEST_INTERNET_CONNECTION, "Облако не отвечает.");
-            }else if(status == InternetConnectionTest.InternetConnectionMessage.NO){
+            }else if(status == InternetConnectionMessage.NO){
                 putNewStatusInStatusString(StatusSender.TEST_INTERNET_CONNECTION, "Доступ в интернет отсутствует.");
             }
             //return false;
@@ -565,13 +699,20 @@ public class GUI implements UISide{
         protected StatusStringObject(String str, int count){ this.statusString = str; this.showCounts = count; }
     }
 
-    protected GUI()
+    protected GUI(CoreSide core)
     {
+        this.core = core;
+        //this.setCoreVersion(coreVersion);
+        this.setCoreVersion(this.core.getCoreVersion());
+        this.setUIVersion(0.01f);
+        this.setLogFileHandler();
+
         // считывание языковых данных из файла идёт первым, так как эти данные нужны уже при создании объекта главного окна
-        CoreSide.getLogFileHandler().publish(new LogRecord(CoreSide.getLogLevel(), "GUI. Before localisation."));
+        //CoreSide.getLogFileHandler().publish(new LogRecord(CoreSide.getLogLevel(), "GUI. Before localisation."));
         localisation();
         // Map локализации заполнена? Теперь можно создавать главное окно
-        frame = new MainWindow(String.format("GreMal's CloudSticker, ver. %s", Controller.PROGRAM_VERSION));
+        // todo версию можно установить только после создания GUI, так как Core только после этого и сможет передать иноформацию о версии.
+        frame = new MainWindow(String.format("GreMal's CloudSticker, ver. %s", this.getCoreVersion()));
         setInitGUIParameters();
         //localisation();
         frame.setVisible(true);
@@ -581,23 +722,42 @@ public class GUI implements UISide{
     public void setInitGUIParameters()
     {
         // Устанавливаем размеры окна
-        if((CoreSide.getPairFromIniDataMap("mainWindowWidth") != null)&&(CoreSide.getPairFromIniDataMap("mainWindowHeight") != null)){
-            frame.setSize(Integer.parseInt(CoreSide.getPairFromIniDataMap("mainWindowWidth")),
-                    Integer.parseInt(CoreSide.getPairFromIniDataMap("mainWindowHeight")));
+        if((core.getPairFromIniDataMap("mainWindowWidth") != null)&&(core.getPairFromIniDataMap("mainWindowHeight") != null)){
+            frame.setSize(Integer.parseInt(core.getPairFromIniDataMap("mainWindowWidth")),
+                    Integer.parseInt(core.getPairFromIniDataMap("mainWindowHeight")));
         }else{
-            CoreSide.putPairToIniDataMap("mainWindowWidth", "200");
-            CoreSide.putPairToIniDataMap("mainWindowHeight", "200");
+            core.putPairToIniDataMap("mainWindowWidth", "200");
+            core.putPairToIniDataMap("mainWindowHeight", "200");
         }
 
         // Устанавливаем положение окна
-        if((CoreSide.getPairFromIniDataMap("mainWindowXPosition") != null)&&(CoreSide.getPairFromIniDataMap("mainWindowYPosition") != null)){
-            frame.setLocation(Integer.parseInt(CoreSide.getPairFromIniDataMap("mainWindowXPosition")),
-                    Integer.parseInt(CoreSide.getPairFromIniDataMap("mainWindowYPosition")));
+        if((core.getPairFromIniDataMap("mainWindowXPosition") != null)&&(core.getPairFromIniDataMap("mainWindowYPosition") != null)){
+            frame.setLocation(Integer.parseInt(core.getPairFromIniDataMap("mainWindowXPosition")),
+                    Integer.parseInt(core.getPairFromIniDataMap("mainWindowYPosition")));
         }else{
-            CoreSide.putPairToIniDataMap("mainWindowXPosition", "0");
-            CoreSide.putPairToIniDataMap("mainWindowYPosition", "0");
+            core.putPairToIniDataMap("mainWindowXPosition", "0");
+            core.putPairToIniDataMap("mainWindowYPosition", "0");
         }
 
+        /*
+        // Устанавливаем размеры окна
+        if((getIniDataFromMap("UI_mainWindowWidth") != null)&&(getIniDataFromMap("UI_mainWindowHeight") != null)){
+            frame.setSize(Integer.parseInt(getIniDataFromMap("UI_mainWindowWidth")),
+                    Integer.parseInt(getIniDataFromMap("UI_mainWindowHeight")));
+        }else{
+            putIniDataInMap("UI_mainWindowWidth", "200");
+            putIniDataInMap("UI_mainWindowHeight", "200");
+        }
+
+        // Устанавливаем положение окна
+        if((getIniDataFromMap("UI_mainWindowXPosition") != null)&&(getIniDataFromMap("UI_mainWindowYPosition") != null)){
+            frame.setLocation(Integer.parseInt(getIniDataFromMap("UI_mainWindowXPosition")),
+                    Integer.parseInt(getIniDataFromMap("UI_mainWindowYPosition")));
+        }else{
+            putIniDataInMap("UI_mainWindowXPosition", "0");
+            putIniDataInMap("UI_mainWindowYPosition", "0");
+        }
+        */
         /*
         // Устанавливаем размеры окна
         if ( Controller.model.iniData.containsKey("mainWindowWidth") && Controller.model.iniData.containsKey("mainWindowHeight") )
@@ -625,9 +785,9 @@ public class GUI implements UISide{
 
     private void localisation(){
         try{
-            localisation = CoreSide.readFromIniFile(locFileName);
-        }catch(FileNotFoundException ex){/* Отработать */}
-        catch(IOException ex){/* Отработать */}
+            localisation = CommonTools.readFromIniFile(locFileName);
+        }catch(FileNotFoundException ex){/* todo Отработать */}
+        catch(IOException ex){/* todo Отработать */}
     }
 
     /*
@@ -637,7 +797,7 @@ public class GUI implements UISide{
     /* Интерфейсные функции для того, чтобы Model мог получить необходимые ссылки из GUI */
     /* **********************************************************************************/
     // Получить статус готовности GUI
-    public boolean getReady(){ return this.isReady; }
+    //public boolean getReady(){ return this.isReady; }
     // Поле с именем текущего устройства
     // protected JTextField getThisDeviceTextField(){ return frame.getCurrentDeviceBox().getTextField(); }
     public AbstractUIControl getThisDeviceTextField(){ return frame.getCurrentDeviceBox().getTextField(); }
@@ -646,26 +806,26 @@ public class GUI implements UISide{
     public AbstractUIControl getThisDeviceButton(){ return frame.getCurrentDeviceBox().getButton(); }
     // Получить текстовые поля других устройств
     public AbstractUIControl[] getOtherCircleDevicesTextField(){
-        SwingUI.STextField[] result = new SwingUI.STextField[Model.MAX_COMPANY_COUNT - 1];
+        SwingUI.STextField[] result = new SwingUI.STextField[getMaxCompanyCount() - 1];
         for(int i = 0; i < result.length; i++){ result[i] = frame.getOtherDevecesBoxes()[i].getTextField(); }
         return result;
     }
-/*    protected JTextField[] getOtherCircleDevicesTextField(){
-        JTextField[] result = new JTextField[Model.MAX_COMPANY_COUNT - 1];
-        for(int i = 0; i < result.length; i++){ result[i] = frame.getOtherDevecesBoxes()[i].getTextField(); }
-        return result;
-    }*/
+    /*    protected JTextField[] getOtherCircleDevicesTextField(){
+            JTextField[] result = new JTextField[Model.MAX_COMPANY_COUNT - 1];
+            for(int i = 0; i < result.length; i++){ result[i] = frame.getOtherDevecesBoxes()[i].getTextField(); }
+            return result;
+        }*/
     // Получить кнопки рядом с текстовыми полями других устройств
     public AbstractUIControl[] getOtherCircleDevicesButton(){
-        SwingUI.SButton[] result = new SwingUI.SButton[Model.MAX_COMPANY_COUNT - 1];
+        SwingUI.SButton[] result = new SwingUI.SButton[getMaxCompanyCount() - 1];
         for(int i = 0; i < result.length; i++){ result[i] = frame.getOtherDevecesBoxes()[i].getButton(); }
         return result;
     }
-/*    protected JButton[] getOtherCircleDevicesButton(){
-        JButton[] result = new JButton[Model.MAX_COMPANY_COUNT - 1];
-        for(int i = 0; i < result.length; i++){ result[i] = frame.getOtherDevecesBoxes()[i].getButton(); }
-        return result;
-    }*/
+    /*    protected JButton[] getOtherCircleDevicesButton(){
+            JButton[] result = new JButton[Model.MAX_COMPANY_COUNT - 1];
+            for(int i = 0; i < result.length; i++){ result[i] = frame.getOtherDevecesBoxes()[i].getButton(); }
+            return result;
+        }*/
     //protected JButton getSynchronisationButton(){ return frame.getSynchronisationButton(); }
     public AbstractUIControl getNoteTextArea(){ return frame.noteArea; }
     //protected JTextArea getNoteTextArea(){ return frame.noteArea; }
@@ -689,8 +849,39 @@ public class GUI implements UISide{
     }*/
     public AbstractUIControl getInvitationTextField(){ return frame.getInvitationInputBox().getTextField(); }
     //protected JTextField getInvitationTextField(){ return frame.getInvitationInputBox().getTextField(); }
-    // возвращает свободное текстовое поле, в GUI-таблице устройств круга
-    public AbstractUIControl getFreeOtherDeviceTextField(){
+
+    /* возвращает первое свободное текстовое поле, в GUI-таблице устройств круга. Алгоритм основан на предположении, что занятые поля идут, начиная с первого, без пробелов. То есть, за первым обнаруженным свободным полем идут только свободные поля. Если функция возвращает null свободных полей нет */
+    public synchronized AbstractUIControl getFreeOtherDeviceTextField() throws InterruptedException{
+        /* todo данную функцию переделать в простой вариант: Core при её вызове сразу передаёт в тело массив занятых полей */
+        /*
+        CommunicationChannal ch = getBusyTextFieldsChannal();
+        AbstractUIControl[] busyFields = null;
+        while (ch.isCommandGo()) {
+            // кто-то уже запросил занятые поля
+            Thread.sleep(5); // ждём освобождения канала
+        }
+        if (!ch.isCommandGo()) {
+            ch.setCommandGo(true);
+        }
+        ; // Даём команду на исполение запроса
+        while (!ch.isCommandReady()) {
+            Thread.sleep(5);
+        } // ждём исполнения запроса
+
+        if(ch.isCommandReady()){ busyFields = (AbstractUIControl[]) ch.getAnswer(); } // запрос исполнен, получаем ответ
+        for(int i = 0; i < frame.arrayTextFieldsAndButtons.length; i++){
+            for(int j = 0; j < busyFields.length; j++){
+                if(frame.arrayTextFieldsAndButtons[i].getTextField().equals(busyFields[j])){
+                    continue;
+                }
+                if(j == busyFields.length - 1) {
+                    return frame.arrayTextFieldsAndButtons[i].getTextField();
+                }
+            }
+        }
+        */
+
+        /*
         for(int i = 0; i < frame.arrayTextFieldsAndButtons.length; i++){
             if(CoreSide.isTextFieldFree(frame.arrayTextFieldsAndButtons[i].getTextField())){
                 return frame.arrayTextFieldsAndButtons[i].getTextField();
@@ -698,7 +889,19 @@ public class GUI implements UISide{
         }
         SwingUI.STextField result = new SwingUI.STextField();
         result.setSText("AllTextFieldsOccupied");
-        return result; // Отработать ошибку "все поля заняты"
+        return result; // todo Отработать ошибку "все поля заняты"
+        */
+
+        for(int i = 0; i < frame.arrayTextFieldsAndButtons.length; i++){
+            if(core.isTextFieldFree(frame.arrayTextFieldsAndButtons[i].getTextField())){
+                return frame.arrayTextFieldsAndButtons[i].getTextField();
+            }
+        }
+        //SwingUI.STextField result = new SwingUI.STextField();
+        //result.setSText("AllTextFieldsOccupied");
+        //return result; // todo Отработать ошибку "все поля заняты"
+
+        return null; // все поля заняты
     }
     /*protected JTextField getFreeOtherDeviceTextField(){
         for(int i = 0; i < frame.arrayTextFieldsAndButtons.length; i++){
@@ -749,17 +952,47 @@ public class GUI implements UISide{
         if(sbtn.getSText() == localisation.get("btInviteToCircle")){ sbtn.setSText(localisation.get("btKickFromCircle")); }
         else{ sbtn.setSText(localisation.get("btInviteToCircle")); }
     }
-/*    protected void invertTextOnButton(JButton jbtn){
-        if(jbtn.getText() == localisation.get("btInviteToCircle")){ jbtn.setText(localisation.get("btKickFromCircle")); }
-        else{ jbtn.setText(localisation.get("btInviteToCircle")); }
-    }*/
+    /*    protected void invertTextOnButton(JButton jbtn){
+            if(jbtn.getText() == localisation.get("btInviteToCircle")){ jbtn.setText(localisation.get("btKickFromCircle")); }
+            else{ jbtn.setText(localisation.get("btInviteToCircle")); }
+        }*/
 /*    Чистка свободного текстового поля в GUI-массиве устройств круга и, если на парной кнопке осталась старая
     надпись Kick, меняем её на Invite */
-    public void clearFreeTextField(){
+    public void clearFreeTextField() throws InterruptedException{
+        /*
+        // todo данную функцию переделать в простой вариант: Core при её вызове сразу передаёт в тело массив занятых полей
+        CommunicationChannal ch = getBusyTextFieldsChannal();
+        AbstractUIControl[] busyFields = null;
+        while (ch.isCommandGo()) {
+            // кто-то уже запросил занятые поля
+            Thread.sleep(5); // ждём освобождения канала
+        }
+        if (!ch.isCommandGo()) {
+            ch.setCommandGo(true);
+        }
+        ; // Даём команду на исполение запроса
+        while (!ch.isCommandReady()) {
+            Thread.sleep(5);
+        } // ждём исполнения запроса
+
+        if(ch.isCommandReady()){ busyFields = (AbstractUIControl[]) ch.getAnswer(); } // запрос исполнен, получаем ответ
+
         for(int i = 0; i < frame.arrayTextFieldsAndButtons.length; i++){
-            if(CoreSide.isTextFieldFree(frame.arrayTextFieldsAndButtons[i].getTextField())){
-                frame.arrayTextFieldsAndButtons[i].getTextField().setText("");
-                frame.arrayTextFieldsAndButtons[i].getButton().setText(localisation.get("btInviteToCircle"));
+            for(int j = 0; j < busyFields.length; j++){
+                if(frame.arrayTextFieldsAndButtons[i].getTextField().equals(busyFields[j])){
+                    continue;
+                }
+                if(j == busyFields.length - 1){
+                    frame.arrayTextFieldsAndButtons[i].getTextField().setSText("");
+                    frame.arrayTextFieldsAndButtons[i].getButton().setSText(localisation.get("btInviteToCircle"));
+                }
+            }
+        }
+        */
+        for(int i = 0; i < frame.arrayTextFieldsAndButtons.length; i++){
+            if(core.isTextFieldFree(frame.arrayTextFieldsAndButtons[i].getTextField())){
+                frame.arrayTextFieldsAndButtons[i].getTextField().setSText("");
+                frame.arrayTextFieldsAndButtons[i].getButton().setSText(localisation.get("btInviteToCircle"));
             }
         }
     }
